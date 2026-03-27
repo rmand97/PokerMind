@@ -1,5 +1,5 @@
 defmodule PokerMind.Engine do
-  alias PokerMind.Engine.Game
+  alias PokerMind.Engine.Match.Game
 
   def some_func() do
     :error

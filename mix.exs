@@ -21,7 +21,7 @@ defmodule PokerMind.MixProject do
   def application do
     [
       mod: {PokerMind.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :wx, :observer]
     ]
   end
 
