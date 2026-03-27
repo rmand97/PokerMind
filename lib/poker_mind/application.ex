@@ -15,7 +15,8 @@ defmodule PokerMind.Application do
       # Start a worker by calling: PokerMind.Worker.start_link(arg)
       # {PokerMind.Worker, arg},
       # Start to serve requests, typically the last entry
-      PokerMindWeb.Endpoint
+      PokerMindWeb.Endpoint,
+      PokerMind.Engine.Supervisor
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
