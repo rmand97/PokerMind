@@ -8,9 +8,22 @@ defmodule PokerMind.Engine.Match.Game do
   end
 
   @impl true
-  def init(_init_args) do
-    {:ok, %{}}
+  def init(init_args) do
+    coordinator_id = Keyword.fetch!(init_args, :coordinator_id)
+    name = Keyword.fetch!(init_args, :name)
+    Process.set_label(name)
+
+    {:ok, %{coordinator_id: coordinator_id}, {:continue, :notify_coordinator}}
   end
+
+  @impl true
+  def handle_continue(:notify_coordinator, state) do
+    starting_player = "rolf"
+    GenServer.cast(Engine.Registry.via(state.coordinator_id), {:ready, starting_player})
+    {:noreply, state}
+  end
+
+  # Game code
 
   defstruct [:players, :id]
 

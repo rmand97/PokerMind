@@ -8,7 +8,10 @@ defmodule PokerMind.Engine.Match.Coordinator do
   end
 
   @impl true
-  def init(_init_args) do
+  def init(init_args) do
+    name = Keyword.fetch!(init_args, :name)
+    Process.set_label(name)
+
     {:ok, %{}}
   end
 end

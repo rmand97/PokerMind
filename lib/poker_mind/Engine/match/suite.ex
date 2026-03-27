@@ -8,18 +8,20 @@ defmodule PokerMind.Engine.Match.Suite do
 
   @impl true
   def init(%{id: suite_id} = _args) do
-    games_children =
-      Enum.map(0..1, fn num ->
-        Supervisor.child_spec({PokerMind.Engine.Match.Game, name: "S#{suite_id}-G#{num}"},
-          id: {PokerMind.Engine.Match.Game, "S#{suite_id}-G#{num}"}
-        )
-      end)
-
     coordinator =
       Supervisor.child_spec(
         {PokerMind.Engine.Match.Coordinator, name: "S#{suite_id}-Coordinator"},
         id: {PokerMind.Engine.Match.Coordinator, "S#{suite_id}-Coordinator"}
       )
+
+    games_children =
+      Enum.map(0..1, fn num ->
+        Supervisor.child_spec(
+          {PokerMind.Engine.Match.Game,
+           name: "S#{suite_id}-G#{num}", coordinator_id: "S#{suite_id}-Coordinator"},
+          id: {PokerMind.Engine.Match.Game, "S#{suite_id}-G#{num}"}
+        )
+      end)
 
     children = [coordinator | games_children]
 

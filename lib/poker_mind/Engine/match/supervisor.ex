@@ -11,7 +11,7 @@ defmodule PokerMind.Engine.Match.Supervisor do
   end
 
   def start_match_suite() do
-    id = to_string(:erlang.ref_to_list(:erlang.make_ref()))
+    id = to_string(:rand.uniform(1000))
 
     DynamicSupervisor.start_child(__MODULE__, {PokerMind.Engine.Match.Suite, %{id: id}})
     |> case do
