@@ -11,7 +11,10 @@ defmodule PokerMind.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view, :boundary] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      preferred_cli_env: [
+        "test.watch": :test
+      ]
     ]
   end
 
@@ -52,7 +55,8 @@ defmodule PokerMind.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:boundary, "~> 0.10.4"}
+      {:boundary, "~> 0.10.4"},
+      {:mix_test_watch, "~> 1.4.0", only: [:dev, :test], runtime: false}
     ]
   end
 
