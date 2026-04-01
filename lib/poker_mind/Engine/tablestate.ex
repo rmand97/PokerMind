@@ -5,7 +5,7 @@ defmodule PokerMind.Engine.TableState do
     :id,
     # :pre_flop | :flop | :turn | :river | :showdown
     :phase,
-    # list of player states
+    # :stack_size | :cards
     :players,
     # current pot
     :pot,
@@ -28,8 +28,7 @@ defmodule PokerMind.Engine.TableState do
     |> initialize_players(init_players)
     # |> set_blinds()
     |> new_deck()
-
-    # |> deal_cards()
+    |> deal_cards()
   end
 
   defp initialize_players(table_state, []) do
@@ -49,12 +48,24 @@ defmodule PokerMind.Engine.TableState do
     suits = [:hearts, :diamonds, :clubs, :spades]
     ranks = [2, 3, 4, 5, 6, 7, 8, 9, 10, :jack, :queen, :king, :ace]
 
-    deck =
-      for suit <- suits, rank <- ranks do
-        %{rank: rank, suit: suit}
-      end
-      |> Enum.shuffle()
+    deck = for suit <- suits, rank <- ranks do
+      %{rank: rank, suit: suit}
+    end
+    |> Enum.shuffle()
 
-    Map.put(table_state, :deck, deck)
+    table_state
+    |> Map.put(:deck, deck)
+  end
+
+  def deal_cards(table_state) do
+    {updated_players, remaining_deck} =
+      Enum.map_reduce(table_state.players, table_state.deck, fn player, acc ->
+        {drawn, remaining} = Enum.split(acc, 2)
+        {Map.put(player, :cards, drawn), remaining}
+      end)
+
+    table_state
+    |> Map.put(:deck, remaining_deck)
+    |> Map.put(:players, updated_players)
   end
 end
