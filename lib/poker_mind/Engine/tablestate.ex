@@ -1,14 +1,22 @@
 defmodule PokerMind.Engine.TableState do
   @enforce_keys [:id, :phase, :players, :pot, :deck, :community_cards]
   defstruct [
-    :id,              # table-id
-    :phase,           # :pre_flop | :flop | :turn | :river | :showdown
-    :players,         # :stack_size | :cards
-    :pot,             # current pot
-    :deck,            # remaining cards
-    :community_cards, # cards on the table
-    :current_player,  # whose turn
-    :current_bet      # bet to match
+    # table-id
+    :id,
+    # :pre_flop | :flop | :turn | :river | :showdown
+    :phase,
+    # :stack_size | :cards
+    :players,
+    # current pot
+    :pot,
+    # remaining cards
+    :deck,
+    # cards on the table
+    :community_cards,
+    # whose turn
+    :current_player,
+    # bet to match
+    :current_bet
   ]
 
   def new() do
@@ -31,19 +39,20 @@ defmodule PokerMind.Engine.TableState do
     initialize_players(add_player(table_state, hd), rest)
   end
 
-  defp add_player(%{players: players} = tablestate, %{stack_size: _} = new_player) when is_list(players) do
-    tablestate
-    |> Map.put(:players, [new_player | players])
+  defp add_player(%{players: players} = tablestate, %{stack_size: _} = new_player)
+       when is_list(players) do
+    Map.put(tablestate, :players, [new_player | players])
   end
 
   defp new_deck(table_state) do
     suits = [:hearts, :diamonds, :clubs, :spades]
     ranks = [2, 3, 4, 5, 6, 7, 8, 9, 10, :jack, :queen, :king, :ace]
 
-    deck = for suit <- suits, rank <- ranks do
-      %{rank: rank, suit: suit}
-    end
-    |> Enum.shuffle()
+    deck =
+      for suit <- suits, rank <- ranks do
+        %{rank: rank, suit: suit}
+      end
+      |> Enum.shuffle()
 
     table_state
     |> Map.put(:deck, deck)

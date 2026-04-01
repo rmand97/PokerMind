@@ -14,4 +14,10 @@ defmodule PokerMind.Engine.Match.Coordinator do
 
     {:ok, %{}}
   end
+
+  @impl true
+  def handle_cast({:ready, _player}, state) do
+    # TODO: implement
+    {:noreply, state}
+  end
 end

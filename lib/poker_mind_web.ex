@@ -1,5 +1,6 @@
 defmodule PokerMindWeb do
   use Boundary, deps: [PokerMind], exports: [Endpoint]
+
   @moduledoc """
   The entrypoint for defining your web interface, such
   as controllers, components, channels, and so on.
