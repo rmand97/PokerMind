@@ -12,8 +12,15 @@ defmodule PokerMind.Engine.TableStateTest do
     %{state: TableState.init(TableState.new(), players)}
   end
 
-  test "init/2 - players are initialized correct for a new table", %{state: init_state} do
+  test "init/2 - players, deck and player cards is initialized correct for a new table", %{state: init_state} do
     num_of_players = Enum.count(init_state.players)
     assert num_of_players == 4
+
+    assert init_state.deck |> Enum.count() == 52 - 2*num_of_players
+
+    player_cards = for player <- init_state.players do
+      player.cards
+    end
+    assert player_cards |> Enum.uniq() |> Enum.count() == num_of_players
   end
 end
