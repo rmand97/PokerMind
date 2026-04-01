@@ -2,13 +2,15 @@ defmodule PokerMind.Engine.TableStateTest do
   alias PokerMind.Engine.TableState
   use ExUnit.Case, async: true
 
-
   setup do
     players =
-      [%{name: "stine", stack_size: 100000, cards: []},
-      %{name: "rolf", stack_size: 100000, cards: []},
-      %{name: "asbjørn", stack_size: 100000, cards: []},
-      %{name: "simon", stack_size: 100000, cards: []}]
+      [
+        %{name: "stine", stack_size: 100_000, cards: []},
+        %{name: "rolf", stack_size: 100_000, cards: []},
+        %{name: "asbjørn", stack_size: 100_000, cards: []},
+        %{name: "simon", stack_size: 100_000, cards: []}
+      ]
+
     %{state: TableState.init(TableState.new(), players)}
   end
 
