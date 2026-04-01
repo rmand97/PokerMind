@@ -2,6 +2,10 @@ defmodule PokerMind.Engine.Match.Game do
   alias PokerMind.Engine
   use GenServer
 
+  # Game code
+
+  defstruct [:players, :id]
+
   def start_link(opts) do
     name = Keyword.fetch!(opts, :name)
     GenServer.start_link(__MODULE__, opts, name: Engine.Registry.via(name))
@@ -22,10 +26,6 @@ defmodule PokerMind.Engine.Match.Game do
     GenServer.cast(Engine.Registry.via(state.coordinator_id), {:ready, starting_player})
     {:noreply, state}
   end
-
-  # Game code
-
-  defstruct [:players, :id]
 
   def add_player(%__MODULE__{} = gamestate, new_player) do
     current_players = gamestate.players

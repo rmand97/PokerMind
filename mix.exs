@@ -57,7 +57,8 @@ defmodule PokerMind.MixProject do
       {:bandit, "~> 1.5"},
       {:boundary, "~> 0.10.4"},
       {:mix_test_watch, "~> 1.4.0", only: [:dev, :test], runtime: false},
-      {:kino, "~> 0.19.0", only: :dev}
+      {:kino, "~> 0.19.0", only: :dev},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 
