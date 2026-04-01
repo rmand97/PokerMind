@@ -12,15 +12,23 @@ defmodule PokerMind.Engine.TableStateTest do
     %{state: TableState.init(TableState.new(), players)}
   end
 
-  test "init/2 - players, deck and player cards is initialized correct for a new table", %{state: init_state} do
-    num_of_players = Enum.count(init_state.players)
-    assert num_of_players == 4
+  test "init/2 - players and deck are initialized for a new table", %{state: state} do
+    # All 4 players are initialized
+    assert Enum.count(state.players) == 4
 
-    assert Enum.count(init_state.deck) == 52 - 2*num_of_players
+    # The deck is initialized in which each player has been dealt two cards
+    assert Enum.count(state.deck) == 52 - 2*Enum.count(state.players)
+  end
 
-    player_cards = for player <- init_state.players do
-      player.cards
+  test "deal_cards/1 - each player gets two seprate cards from the deck", %{state: state} do
+    # Check that two players have different cards
+    [player1, player2 | _rest] = state.players
+    assert Enum.sort(player1.cards) != Enum.sort(player2.cards)
+
+    # Check that dealt cards have been removed from the deck
+    dealt_cards = Enum.flat_map(state.players, fn player -> player.cards end)
+    for card <- dealt_cards do
+      assert !Enum.member?(state.deck, card)
     end
-    assert player_cards |> Enum.uniq() |> Enum.count() == num_of_players
   end
 end
