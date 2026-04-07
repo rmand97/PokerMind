@@ -5,7 +5,7 @@ defmodule PokerMind.Engine.TableState do
     :id,
     # :pre_flop | :flop | :turn | :river | :showdown
     :phase,
-    # :stack_size | :cards
+    # list of %TableState.Player{} structs
     :players,
     # current pot
     :pot,
@@ -56,7 +56,32 @@ defmodule PokerMind.Engine.TableState do
     |> advance_player()
   end
 
-  def advance_player(%__MODULE__{} = state, key \\ :current_player, player \\ nil) do
+  defmodule Player do
+    @enforce_keys [:player_id, :remaining_chips]
+    defstruct [
+      # unique player identifier
+      :player_id,
+      # list of two %Card{} structs, nil between hands
+      :current_hand,
+      :remaining_chips,
+      # :active_in_hand | :inactive_in_hand | :out_of_chips
+      :player_state,
+      # whether player has acted in current betting round
+      :has_acted
+    ]
+
+    @type player_state :: :active_in_hand | :inactive_in_hand | :out_of_chips
+
+    @type t :: %__MODULE__{
+            player_id: String.t(),
+            current_hand: list() | nil,
+            remaining_chips: non_neg_integer(),
+            player_state: player_state() | nil,
+            has_acted: boolean() | nil
+          }
+  end
+
+  def advance_player(state, key \\ :current_player, player \\ nil) do
     from_player =
       case player do
         nil -> state.current_player
