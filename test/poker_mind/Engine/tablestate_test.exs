@@ -88,18 +88,13 @@ defmodule PokerMind.Engine.TableStateTest do
   test "advance_phase/2 - valid transition from pre_flop to flop", %{
     state: state
   } do
-    {msg, new_state} = TableState.advance_phase(state, :flop)
-
-    assert msg == :ok
-    assert new_state.phase == :flop
+    assert %{phase: :flop} = TableState.advance_phase(state, :flop)
   end
 
   test "advance_phase/2 - invalid transition from pre_flop to river", %{
     state: state
   } do
-    {msg, new_state} = TableState.advance_phase(state, :river)
-
-    assert msg == :error
+    assert {:error, new_state} = TableState.advance_phase(state, :river)
     assert new_state == {:invalid_transition, :pre_flop, :river}
   end
 end
