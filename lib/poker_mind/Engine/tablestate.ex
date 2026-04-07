@@ -69,17 +69,9 @@ defmodule PokerMind.Engine.TableState do
       # whether player has acted in current betting round
       :has_acted
     ]
-
-    @type player_state :: :active_in_hand | :inactive_in_hand | :out_of_chips
-
-    @type t :: %__MODULE__{
-            player_id: String.t(),
-            current_hand: list() | nil,
-            remaining_chips: non_neg_integer(),
-            player_state: player_state() | nil,
-            has_acted: boolean() | nil
-          }
   end
+
+  # TODO validation function på player_state skal være en af følgende :active_in_hand | :inactive_in_hand | :out_of_chips
 
   def advance_player(state, key \\ :current_player, player \\ nil) do
     from_player =
