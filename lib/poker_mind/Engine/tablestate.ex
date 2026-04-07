@@ -26,9 +26,9 @@ defmodule PokerMind.Engine.TableState do
   def init(state, init_players) when is_list(init_players) do
     state
     |> initialize_players(init_players)
-    # |> set_blinds()
     |> new_deck()
     |> deal_cards()
+    |> set_blinds()
   end
 
   defp initialize_players(table_state, []) do
@@ -42,6 +42,20 @@ defmodule PokerMind.Engine.TableState do
   defp add_player(%{players: players} = tablestate, %{stack_size: _} = new_player)
        when is_list(players) do
     Map.put(tablestate, :players, [new_player | players])
+  end
+
+  defp set_blinds(table_state) do
+    small_blind = Enum.random(table_state.players)
+    big_blind = advance_player(table_state, small_blind)
+    current_player = advance_player(table_state, big_blind)
+
+    table_state
+    |> Map.put(:current_player, current_player)
+  end
+
+  defp advance_player(table_state, from_player) do
+    index = Enum.find_index(table_state.players, fn p -> p == from_player end)
+    Enum.at(table_state.players, rem(index + 1, length(table_state.players)))
   end
 
   defp new_deck(table_state) do

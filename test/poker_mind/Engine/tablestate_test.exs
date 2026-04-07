@@ -34,4 +34,8 @@ defmodule PokerMind.Engine.TableStateTest do
       assert !Enum.member?(state.deck, card)
     end
   end
+
+  test "set_blinds/1 - a player is chosen as current player", %{state: state} do
+    assert Enum.member?(state.players, state.current_player)
+  end
 end
