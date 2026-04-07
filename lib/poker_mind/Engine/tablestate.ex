@@ -96,4 +96,20 @@ defmodule PokerMind.Engine.TableState do
     |> Map.put(:deck, remaining_deck)
     |> Map.put(:players, updated_players)
   end
+
+  @valid_transitions %{
+    :pre_flop => [:flop, :showdown],
+    :flop => [:turn, :showdown],
+    :turn => [:river, :showdown],
+    :river => [:showdown],
+    :showdown => [:finished]
+  }
+
+  def advance_phase(%__MODULE__{} = state, next_phase) when is_atom(next_phase) do
+    if next_phase in Map.get(@valid_transitions, state.phase, []) do
+      Map.put(state, :phase, next_phase)
+    else
+      {:error, {:invalid_transition, state.phase, next_phase}}
+    end
+  end
 end

@@ -84,4 +84,17 @@ defmodule PokerMind.Engine.TableStateTest do
 
     assert Enum.find_index(new_state.players, fn p -> p == new_state.current_player end) == 0
   end
+
+  test "advance_phase/2 - valid transition from pre_flop to flop", %{
+    state: state
+  } do
+    assert %{phase: :flop} = TableState.advance_phase(state, :flop)
+  end
+
+  test "advance_phase/2 - invalid transition from pre_flop to river", %{
+    state: state
+  } do
+    assert {:error, new_state} = TableState.advance_phase(state, :river)
+    assert new_state == {:invalid_transition, :pre_flop, :river}
+  end
 end
