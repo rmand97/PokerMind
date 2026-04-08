@@ -1,0 +1,81 @@
+name: k6 Performance Tests
+
+on:
+    push:
+        branches: ["main"]
+    pull_request:
+        branches: ["main"]
+
+# A CI-only secret key base is used to satisfy Phoenix prod config.
+# This value is not sensitive – no real user data exists in CI.
+# You may override it by setting the CI_SECRET_KEY_BASE repository secret.
+env:
+    MIX_ENV: prod
+    SECRET_KEY_BASE: ${{ secrets.CI_SECRET_KEY_BASE || 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }}
+    PHX_HOST: localhost
+    PORT: 4000
+
+jobs:
+    k6:
+        runs-on: ubuntu-latest
+        name: k6 Performance Tests
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Elixir
+              uses: erlef/setup-beam@v1
+              with:
+                  otp-version: "28.4.1"
+                  elixir-version: "1.19.5"
+
+            - name: Cache deps
+              uses: actions/cache@v5
+              with:
+                  path: deps
+                  key: ${{ runner.os }}-mix-k6-deps-${{ hashFiles('**/mix.lock') }}
+                  restore-keys: ${{ runner.os }}-mix-k6-deps-
+
+            - name: Cache compiled build
+              uses: actions/cache@v5
+              with:
+                  path: _build
+                  key: ${{ runner.os }}-mix-k6-build-prod-${{ hashFiles('**/mix.lock') }}
+                  restore-keys: ${{ runner.os }}-mix-k6-build-prod-
+
+            - name: Install dependencies
+              run: mix deps.get
+
+            - name: Compile
+              run: mix compile
+
+            - name: Install esbuild
+              run: mix assets.setup
+
+            - name: Build and digest static assets
+              run: mix assets.deploy
+
+            - name: Start Phoenix server (background)
+              run: mix phx.server &
+
+            - name: Wait for server to be ready
+              run: |
+                  echo "Waiting for Phoenix server on port $PORT..."
+                  for i in $(seq 1 30); do
+                    if curl -sf --max-time 2 "http://localhost:${PORT}/" > /dev/null; then
+                      echo "Server is ready after ${i}s"
+                      exit 0
+                    fi
+                    echo "  attempt ${i}/30 – retrying in 1s"
+                    sleep 1
+                  done
+                  echo "ERROR: server did not start within 30 seconds" >&2
+                  exit 1
+
+            - name: Run k6 performance tests
+              uses: grafana/k6-action@v0.3.2
+              env:
+                  BASE_URL: http://localhost:${{ env.PORT }}
+              with:
+                  filename: k6/scenarios/page_controller.js
