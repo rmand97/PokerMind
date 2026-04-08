@@ -1,11 +1,13 @@
 defmodule PokerMind.Engine.TableState do
+  alias PokerMind.Engine.TableState.PlayerState
+
   @enforce_keys [:id, :phase, :players, :pot, :deck, :community_cards]
   defstruct [
     # table-id
     :id,
     # :pre_flop | :flop | :turn | :river | :showdown
     :phase,
-    # :stack_size | :cards
+    # list of %TableState.PlayerState{} structs
     :players,
     # current pot
     :pot,
@@ -38,11 +40,11 @@ defmodule PokerMind.Engine.TableState do
     state
   end
 
-  defp initialize_players(%__MODULE__{} = state, [hd | rest]) do
-    initialize_players(add_player(state, hd), rest)
+  defp initialize_players(%__MODULE__{} = state, [%PlayerState{} = first_player | rest]) do
+    initialize_players(add_player(state, first_player), rest)
   end
 
-  defp add_player(%__MODULE__{} = state, new_player)
+  defp add_player(%__MODULE__{} = state, %PlayerState{} = new_player)
        when is_list(state.players) do
     Map.put(state, :players, [new_player | state.players])
   end
@@ -56,7 +58,11 @@ defmodule PokerMind.Engine.TableState do
     |> advance_player()
   end
 
-  def advance_player(%__MODULE__{} = state, key \\ :current_player, player \\ nil) do
+  # TODO validation function på player_state skal være en af følgende
+  # :active_in_hand | :inactive_in_hand | :out_of_chips
+
+  def advance_player(state, key \\ :current_player, player \\ nil)
+      when is_nil(player) or is_struct(player, PlayerState) do
     from_player =
       case player do
         nil -> state.current_player

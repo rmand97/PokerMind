@@ -1,14 +1,15 @@
 defmodule PokerMind.Engine.TableStateTest do
   alias PokerMind.Engine.TableState
+  alias PokerMind.Engine.TableState.PlayerState
   use ExUnit.Case, async: true
 
   setup do
     players =
       [
-        %{name: "stine", stack_size: 100_000, cards: []},
-        %{name: "rolf", stack_size: 100_000, cards: []},
-        %{name: "asbjørn", stack_size: 100_000, cards: []},
-        %{name: "simon", stack_size: 100_000, cards: []}
+        %PlayerState{player_id: "stine", remaining_chips: 100_000, current_hand: []},
+        %PlayerState{player_id: "rolf", remaining_chips: 100_000, current_hand: []},
+        %PlayerState{player_id: "asbjørn", remaining_chips: 100_000, current_hand: []},
+        %PlayerState{player_id: "simon", remaining_chips: 100_000, current_hand: []}
       ]
 
     %{state: TableState.init(TableState.new(), players)}
@@ -47,8 +48,8 @@ defmodule PokerMind.Engine.TableStateTest do
   test "set_blinds/1 - exactly 2 players, a player is chosen as both small blind and current player" do
     players =
       [
-        %{name: "stine", stack_size: 100_000, cards: []},
-        %{name: "rolf", stack_size: 100_000, cards: []}
+        %PlayerState{player_id: "stine", remaining_chips: 100_000, current_hand: []},
+        %PlayerState{player_id: "rolf", remaining_chips: 100_000, current_hand: []}
       ]
 
     state = TableState.init(TableState.new(), players)
