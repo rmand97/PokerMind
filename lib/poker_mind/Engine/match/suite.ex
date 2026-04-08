@@ -13,7 +13,6 @@ defmodule PokerMind.Engine.Match.Suite do
   def init(args) do
     suite_id = Keyword.fetch!(args, :id)
     num_games = Keyword.fetch!(args, :num_games)
-    # TODO: take num_games as a parameter but default to 10
     coordinator_id = Coordinator.id(suite_id)
 
     coordinator =
