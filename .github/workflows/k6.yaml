@@ -21,31 +21,11 @@ jobs:
         name: k6 Performance Tests
 
         steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-
-            - name: Set up Elixir
-              uses: erlef/setup-beam@v1
+            - name: Setup Elixir
+              uses: ./.github/actions/setup-elixir
               with:
-                  otp-version: "28.4.1"
-                  elixir-version: "1.19.5"
-
-            - name: Cache deps
-              uses: actions/cache@v5
-              with:
-                  path: deps
-                  key: ${{ runner.os }}-mix-k6-deps-${{ hashFiles('**/mix.lock') }}
-                  restore-keys: ${{ runner.os }}-mix-k6-deps-
-
-            - name: Cache compiled build
-              uses: actions/cache@v5
-              with:
-                  path: _build
-                  key: ${{ runner.os }}-mix-k6-build-prod-${{ hashFiles('**/mix.lock') }}
-                  restore-keys: ${{ runner.os }}-mix-k6-build-prod-
-
-            - name: Install dependencies
-              run: mix deps.get
+                  cache-prefix: k6
+                  mix-env: prod
 
             - name: Compile
               run: mix compile

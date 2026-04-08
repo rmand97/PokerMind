@@ -1,0 +1,49 @@
+name: Setup Elixir
+description: Checkout code, set up Elixir/OTP, cache deps and build, and install dependencies
+
+inputs:
+  otp-version:
+    description: OTP version to use
+    default: "28.4.1"
+  elixir-version:
+    description: Elixir version to use
+    default: "1.19.5"
+  cache-prefix:
+    description: Prefix for cache keys (use a different value per workflow to avoid collisions)
+    required: true
+  mix-env:
+    description: MIX_ENV value, included in the build cache key
+    default: "test"
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: ${{ inputs.otp-version }}
+        elixir-version: ${{ inputs.elixir-version }}
+
+    - name: Cache deps
+      uses: actions/cache@v5
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ inputs.cache-prefix }}-deps-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-${{ inputs.cache-prefix }}-deps-
+
+    - name: Cache compiled build
+      uses: actions/cache@v5
+      with:
+        path: _build
+        key: ${{ runner.os }}-mix-${{ inputs.cache-prefix }}-build-${{ inputs.mix-env }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-${{ inputs.cache-prefix }}-build-${{ inputs.mix-env }}-
+          ${{ runner.os }}-mix-${{ inputs.cache-prefix }}-build-
+          ${{ runner.os }}-mix-
+
+    - name: Install dependencies
+      shell: bash
+      run: mix deps.get
