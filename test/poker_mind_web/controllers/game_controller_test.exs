@@ -95,6 +95,7 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
 
     assert %{"data" => state} = json_response(conn, 200)
     assert state["coordinator_id"] == coordinator_id
+    # TODO: game is empty
     assert state["game"] == %{}
     assert state["id"] == game_id
   end

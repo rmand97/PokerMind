@@ -7,6 +7,8 @@ defmodule PokerMindWeb.GameController do
   def next_games(conn, %{"player_id" => player_id, "suite_id" => suite_id}) do
     coordinator_id = Coordinator.id(suite_id)
     {games, _count} = Coordinator.next_games(coordinator_id, player_id)
+
+    # TODO: Filter what information the player gets
     json(conn, %{data: games})
   end
 
