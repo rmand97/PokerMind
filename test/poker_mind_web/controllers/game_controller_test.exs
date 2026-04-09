@@ -61,7 +61,7 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
   end
 
   test "POST /api/action with player_id, game_id and action", %{conn: conn} do
-    suite_id = "S1"
+    suite_id = "S2"
     coordinator_id = Coordinator.id(suite_id)
     game_id = "game-1"
 
