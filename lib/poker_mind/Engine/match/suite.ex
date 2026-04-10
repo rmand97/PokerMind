@@ -13,6 +13,7 @@ defmodule PokerMind.Engine.Match.Suite do
   def init(args) do
     suite_id = Keyword.fetch!(args, :id)
     num_games = Keyword.fetch!(args, :num_games)
+    players = Keyword.fetch!(args, :players)
     coordinator_id = Coordinator.id(suite_id)
 
     coordinator =
@@ -26,7 +27,7 @@ defmodule PokerMind.Engine.Match.Suite do
         game_id = Game.id(suite_id, num)
 
         Supervisor.child_spec(
-          {Game, name: game_id, coordinator_id: coordinator_id},
+          {Game, name: game_id, players: players, coordinator_id: coordinator_id},
           id: {Game, game_id}
         )
       end)

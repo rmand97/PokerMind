@@ -23,9 +23,8 @@ defmodule PokerMind.Engine.TableState do
     :current_bet
   ]
 
-  def new() do
-    # TODO: change hardcode of id
-    %__MODULE__{id: "123", phase: :pre_flop, players: [], pot: 0, deck: [], community_cards: []}
+  def new(id) when is_binary(id) do
+    %__MODULE__{id: id, phase: :pre_flop, players: [], pot: 0, deck: [], community_cards: []}
   end
 
   def init(%__MODULE__{} = state, init_players) when is_list(init_players) do
@@ -40,13 +39,17 @@ defmodule PokerMind.Engine.TableState do
     state
   end
 
-  defp initialize_players(%__MODULE__{} = state, [%PlayerState{} = first_player | rest]) do
+  defp initialize_players(%__MODULE__{} = state, [first_player | rest]) do
     initialize_players(add_player(state, first_player), rest)
   end
 
-  defp add_player(%__MODULE__{} = state, %PlayerState{} = new_player)
+  defp add_player(%__MODULE__{} = state, new_player_id)
+       when is_binary(new_player_id)
        when is_list(state.players) do
-    Map.put(state, :players, [new_player | state.players])
+    # TODO: remaining_chips is hardcoded to 100
+    Map.put(state, :players, [
+      %PlayerState{player_id: new_player_id, remaining_chips: 100} | state.players
+    ])
   end
 
   defp set_blinds(%__MODULE__{} = state) do

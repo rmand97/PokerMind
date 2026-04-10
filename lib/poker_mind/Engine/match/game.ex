@@ -1,6 +1,7 @@
 defmodule PokerMind.Engine.Match.Game do
   alias PokerMind.Engine
   alias PokerMind.Engine.Match.Coordinator
+  alias PokerMind.Engine.TableState
   use GenServer
 
   def start_link(opts) do
@@ -20,10 +21,11 @@ defmodule PokerMind.Engine.Match.Game do
   def init(init_args) do
     coordinator_id = Keyword.fetch!(init_args, :coordinator_id)
     name = Keyword.fetch!(init_args, :name)
+    players = Keyword.fetch!(init_args, :players)
+
     Process.set_label(name)
 
-    # TODO: put gamestate
-    game = %{}
+    game = TableState.init(TableState.new(name), players)
 
     {:ok, %{coordinator_id: coordinator_id, id: name, game: game},
      {:continue, :notify_coordinator}}
@@ -35,9 +37,13 @@ defmodule PokerMind.Engine.Match.Game do
 
   @impl true
   def handle_continue(:notify_coordinator, state) do
-    starting_player = to_string(:rand.uniform(1000))
+    :ok =
+      Coordinator.register_game_ready(
+        state.coordinator_id,
+        state.id,
+        state.game.current_player.player_id
+      )
 
-    Coordinator.register_game_ready(state.coordinator_id, state.id, starting_player)
     {:noreply, state}
   end
 

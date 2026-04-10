@@ -13,7 +13,7 @@ defmodule PokerMind.Engine.TableStateTest do
         %PlayerState{player_id: "simon", remaining_chips: 100_000, current_hand: []}
       ]
 
-    %{state: TableState.init(TableState.new(), players)}
+    %{state: TableState.init(TableState.new("123"), players)}
   end
 
   test "init/2 - players and deck are initialized for a new table", %{state: state} do
@@ -53,7 +53,7 @@ defmodule PokerMind.Engine.TableStateTest do
         %PlayerState{player_id: "rolf", remaining_chips: 100_000, current_hand: []}
       ]
 
-    state = TableState.init(TableState.new(), players)
+    state = TableState.init(TableState.new("123"), players)
 
     assert Enum.member?(state.players, state.small_blind)
     assert Enum.member?(state.players, state.current_player)

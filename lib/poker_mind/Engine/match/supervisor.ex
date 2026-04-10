@@ -11,8 +11,11 @@ defmodule PokerMind.Engine.Match.Supervisor do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  def start_match_suite(suite_id, num_games \\ 10) do
-    DynamicSupervisor.start_child(__MODULE__, {Suite, id: suite_id, num_games: num_games})
+  def start_match_suite(suite_id, players, num_games \\ 10) do
+    DynamicSupervisor.start_child(
+      __MODULE__,
+      {Suite, id: suite_id, players: players, num_games: num_games}
+    )
     |> case do
       {:ok, pid} -> {:ok, pid, suite_id}
       error -> error

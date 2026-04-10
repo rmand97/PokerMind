@@ -1,5 +1,13 @@
 defmodule PokerMind do
-  use Boundary, deps: [], exports: [Engine.Match.Coordinator, Engine.Match.Game]
+  use Boundary,
+    deps: [],
+    exports: [
+      Engine.Match.Supervisor,
+      Engine.Match.Coordinator,
+      Engine.Match.Game,
+      Engine.TableState,
+      Engine.TableState.PlayerState
+    ]
 
   @moduledoc """
   PokerMind keeps the contexts that define your domain

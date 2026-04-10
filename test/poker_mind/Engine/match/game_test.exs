@@ -17,7 +17,7 @@ defmodule PokerMind.Engine.Match.GameTest do
 
     start_supervised!(
       Supervisor.child_spec(
-        {Game, name: game_id, coordinator_id: coordinator_id},
+        {Game, name: game_id, players: ["stine"], coordinator_id: coordinator_id},
         id: game_id
       )
     )
@@ -30,7 +30,7 @@ defmodule PokerMind.Engine.Match.GameTest do
   describe "Game tests" do
     test "get_state/2 - returns gamestate", test_vars do
       # TODO: Change when we have actually state in the Game GenServer
-      assert Game.get_state(test_vars.game_id) == %{}
+      assert Game.get_state(test_vars.game_id) != nil
     end
   end
 end

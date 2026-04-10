@@ -1,5 +1,6 @@
 defmodule PokerMind.Engine.Match.Coordinator do
   alias PokerMind.Engine
+  alias PokerMind.Engine.Match.Game
   use GenServer
 
   @init_state %{
@@ -78,6 +79,11 @@ defmodule PokerMind.Engine.Match.Coordinator do
           true ->
             {:cont, acc}
         end
+      end)
+      |> Kernel.then(fn {game_ids, _count} ->
+        Enum.map(game_ids, fn game_id ->
+          Game.get_state(game_id)
+        end)
       end)
 
     {:reply, response, state}
