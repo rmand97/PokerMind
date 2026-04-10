@@ -3,26 +3,9 @@ defmodule PokerMind.Engine.Match.Coordinator do
   alias PokerMind.Engine.Match.Game
   use GenServer
 
-  @init_state %{
-    all_games_ready: false,
-    games: %{},
-    num_games: nil
-  }
-
   def start_link(opts) do
     name = Keyword.fetch!(opts, :name)
     GenServer.start_link(__MODULE__, opts, name: Engine.Registry.via(name))
-  end
-
-  @impl true
-  def init(init_args) do
-    name = Keyword.fetch!(init_args, :name)
-    num_games = Keyword.fetch!(init_args, :num_games)
-    Process.set_label(name)
-
-    state = Map.put(@init_state, :num_games, num_games)
-
-    {:ok, state}
   end
 
   def get_state(coordinator_id) do
@@ -39,6 +22,30 @@ defmodule PokerMind.Engine.Match.Coordinator do
 
   def next_games(coordinator_id, player, amount \\ 10) do
     GenServer.call(Engine.Registry.via(coordinator_id), {:next_games, player, amount})
+  end
+
+  defp all_games_ready?(state) do
+    Enum.count(state.games) == state.num_games and
+      Enum.all?(state.games, fn {_id, game_state} -> game_state.ready end)
+  end
+
+  # Callbacks
+
+  @init_state %{
+    all_games_ready: false,
+    games: %{},
+    num_games: nil
+  }
+
+  @impl true
+  def init(init_args) do
+    name = Keyword.fetch!(init_args, :name)
+    num_games = Keyword.fetch!(init_args, :num_games)
+    Process.set_label(name)
+
+    state = Map.put(@init_state, :num_games, num_games)
+
+    {:ok, state}
   end
 
   @impl true
@@ -87,10 +94,5 @@ defmodule PokerMind.Engine.Match.Coordinator do
       end)
 
     {:reply, response, state}
-  end
-
-  defp all_games_ready?(state) do
-    Enum.count(state.games) == state.num_games and
-      Enum.all?(state.games, fn {_id, game_state} -> game_state.ready end)
   end
 end
