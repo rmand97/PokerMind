@@ -49,7 +49,10 @@ defmodule PokerMind.Engine.TableState do
   defp add_player(%__MODULE__{} = state, new_player_id)
        when is_binary(new_player_id)
        when is_list(state.players) do
-    new_player = PlayerState.set_player_value(new_player_id, :state, :active_in_hand)
+    new_player =
+      %PlayerState{id: new_player_id, remaining_chips: 100}
+      |> PlayerState.set_player_value(:state, :active_in_hand)
+
     Map.put(state, :players, [new_player | state.players])
   end
 

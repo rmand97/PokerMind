@@ -6,14 +6,9 @@ defmodule PokerMind.Engine.ActionsTest do
 
   setup do
     players =
-      [
-        %PlayerState{id: "stine", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "rolf", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "asbjørn", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "simon", remaining_chips: 100_000, current_hand: []}
-      ]
+      ["stine", "rolf", "asbjørn", "simon"]
 
-    %{state: TableState.init(TableState.new(), players)}
+    %{state: TableState.init(TableState.new("Fold_test"), players)}
   end
 
   test "fold action", %{state: init_state} do
