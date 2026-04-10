@@ -58,7 +58,7 @@ defmodule PokerMindWeb.GameController do
 
   # TODO: This is a draft
   defp map_playerstate(%PlayerState{} = player) do
-    %{player_id: player.player_id}
+    %{player_id: player.id}
   end
 
   defp map_tablestate(%TableState{} = tablestate) do

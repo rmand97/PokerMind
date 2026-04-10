@@ -7,10 +7,10 @@ defmodule PokerMind.Engine.TableStateTest do
   setup do
     players =
       [
-        %PlayerState{player_id: "stine", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{player_id: "rolf", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{player_id: "asbjørn", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{player_id: "simon", remaining_chips: 100_000, current_hand: []}
+        %PlayerState{id: "stine", remaining_chips: 100_000, current_hand: []},
+        %PlayerState{id: "rolf", remaining_chips: 100_000, current_hand: []},
+        %PlayerState{id: "asbjørn", remaining_chips: 100_000, current_hand: []},
+        %PlayerState{id: "simon", remaining_chips: 100_000, current_hand: []}
       ]
 
     %{state: TableState.init(TableState.new("123"), players)}
@@ -27,10 +27,10 @@ defmodule PokerMind.Engine.TableStateTest do
   test "deal_cards/1 - each player gets two seprate cards from the deck", %{state: state} do
     # Check that two players have different cards
     [player1, player2 | _rest] = state.players
-    assert Enum.sort(player1.cards) != Enum.sort(player2.cards)
+    assert Enum.sort(player1.current_hand) != Enum.sort(player2.current_hand)
 
     # Check that dealt cards have been removed from the deck
-    dealt_cards = Enum.flat_map(state.players, fn player -> player.cards end)
+    dealt_cards = Enum.flat_map(state.players, fn player -> player.current_hand end)
 
     for card <- dealt_cards do
       assert !Enum.member?(state.deck, card)
@@ -49,8 +49,8 @@ defmodule PokerMind.Engine.TableStateTest do
   test "set_blinds/1 - exactly 2 players, a player is chosen as both small blind and current player" do
     players =
       [
-        %PlayerState{player_id: "stine", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{player_id: "rolf", remaining_chips: 100_000, current_hand: []}
+        %PlayerState{id: "stine", remaining_chips: 100_000, current_hand: []},
+        %PlayerState{id: "rolf", remaining_chips: 100_000, current_hand: []}
       ]
 
     state = TableState.init(TableState.new("123"), players)

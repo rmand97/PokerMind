@@ -20,7 +20,10 @@ defmodule PokerMind.Engine.TableState do
     # whose turn
     :current_player,
     # bet to match
-    :current_bet
+    :current_bet,
+    # The player who was first to act or
+    # The player who bet to reset option
+    :action_started_at
   ]
 
   def new(id) when is_binary(id) do
@@ -46,10 +49,24 @@ defmodule PokerMind.Engine.TableState do
   defp add_player(%__MODULE__{} = state, new_player_id)
        when is_binary(new_player_id)
        when is_list(state.players) do
-    # TODO: remaining_chips is hardcoded to 100
-    Map.put(state, :players, [
-      %PlayerState{player_id: new_player_id, remaining_chips: 100} | state.players
-    ])
+    new_player =
+      %PlayerState{id: new_player_id, remaining_chips: 100}
+      |> PlayerState.set_player_value(:state, :active_in_hand)
+
+    Map.put(state, :players, [new_player | state.players])
+  end
+
+  def set_player_value(%__MODULE__{} = state, player_id, key, new_key_value) do
+    updated_players =
+      Enum.map(state.players, fn player ->
+        if player.id == player_id do
+          PlayerState.set_player_value(player, key, new_key_value)
+        else
+          player
+        end
+      end)
+
+    %__MODULE__{state | players: updated_players}
   end
 
   defp set_blinds(%__MODULE__{} = state) do
@@ -62,7 +79,7 @@ defmodule PokerMind.Engine.TableState do
   end
 
   # TODO validation function på player_state skal være en af følgende
-  # :active_in_hand | :inactive_in_hand | :out_of_chips
+  # :active_in_hand | :inactive_in_hand | :out_of_chips | :all_in
 
   def advance_player(state, key \\ :current_player, player \\ nil)
       when is_nil(player) or is_struct(player, PlayerState) do
@@ -96,9 +113,9 @@ defmodule PokerMind.Engine.TableState do
 
   def deal_cards(%__MODULE__{} = state) do
     {updated_players, remaining_deck} =
-      Enum.map_reduce(state.players, state.deck, fn player, acc ->
+      Enum.map_reduce(state.players, state.deck, fn %PlayerState{} = player, acc ->
         {drawn, remaining} = Enum.split(acc, 2)
-        {Map.put(player, :cards, drawn), remaining}
+        {%{player | current_hand: drawn}, remaining}
       end)
 
     state
@@ -114,11 +131,76 @@ defmodule PokerMind.Engine.TableState do
     :showdown => [:finished]
   }
 
+  # TODO opdater så det passer med ovenstående valid transitions
+  def next_phase(current_phase) do
+    case current_phase do
+      :pre_flop -> :flop
+      :flop -> :turn
+      :turn -> :river
+      :river -> :showdown
+    end
+  end
+
   def advance_phase(%__MODULE__{} = state, next_phase) when is_atom(next_phase) do
     if next_phase in Map.get(@valid_transitions, state.phase, []) do
       Map.put(state, :phase, next_phase)
     else
       {:error, {:invalid_transition, state.phase, next_phase}}
     end
+  end
+
+  def set_current_player_for_phase(%__MODULE__{} = state) do
+    start_from =
+      case state.phase do
+        # if pre_flop bb+1 goes first. if he is inactive -> pick next active
+        :pre_flop ->
+          after_small_blind = find_next_active_player(state, state.small_blind)
+          after_big_blind = find_next_active_player(state, after_small_blind)
+          after_big_blind
+
+        _post_flop ->
+          # in any other case/phase sb goes first. if he is inactive -> pick next active
+          state.small_blind
+      end
+
+    # check if inactive pick next active
+    start_from =
+      if start_from.state == :active_in_hand do
+        start_from
+        # if inactive pick next active
+      else
+        find_next_active_player(state, start_from)
+      end
+
+    %{state | current_player: start_from, action_started_at: start_from}
+  end
+
+  def round_complete?(%__MODULE__{players: players}) do
+    active_players =
+      Enum.filter(players, fn player ->
+        player.state == :active_in_hand
+      end)
+
+    Enum.all?(active_players, fn player ->
+      player.has_acted
+    end)
+  end
+
+  def find_next_active_player(%__MODULE__{players: players}, from_player) do
+    players_to_consider = acting_order_from(players, from_player)
+
+    players_to_consider
+    |> Enum.find(fn player -> player.state == :active_in_hand end)
+  end
+
+  defp acting_order_from(players, from_player) do
+    # Where is from_player in list
+    start = Enum.find_index(players, fn player -> player.id == from_player.id end)
+
+    # Split list and remove from_player
+    {first_list, [_from_player | second_list]} = Enum.split(players, start)
+
+    # order rest of players in turn order
+    second_list ++ first_list
   end
 end
