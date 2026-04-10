@@ -41,7 +41,7 @@ defmodule PokerMind.Engine.Match.Game do
       Coordinator.register_game_ready(
         state.coordinator_id,
         state.id,
-        state.game.current_player.id
+        state.game.current_player_id
       )
 
     {:noreply, state}

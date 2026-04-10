@@ -7,10 +7,10 @@ defmodule PokerMind.Engine.TableStateTest do
   setup do
     players =
       [
-        %PlayerState{id: "stine", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "rolf", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "asbjørn", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "simon", remaining_chips: 100_000, current_hand: []}
+        "stine",
+        "rolf",
+        "asbjørn",
+        "simon"
       ]
 
     %{state: TableState.init(TableState.new("123"), players)}
@@ -41,23 +41,23 @@ defmodule PokerMind.Engine.TableStateTest do
        %{
          state: state
        } do
-    assert Enum.member?(state.players, state.small_blind)
-    assert Enum.member?(state.players, state.current_player)
-    assert state.small_blind != state.current_player
+    assert Enum.any?(state.players, fn player -> player.id == state.small_blind_id end)
+    assert Enum.any?(state.players, fn player -> player.id == state.current_player_id end)
+    assert state.small_blind_id != state.current_player_id
   end
 
   test "set_blinds/1 - exactly 2 players, a player is chosen as both small blind and current player" do
     players =
       [
-        %PlayerState{id: "stine", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "rolf", remaining_chips: 100_000, current_hand: []}
+        "stine",
+        "rolf"
       ]
 
     state = TableState.init(TableState.new("123"), players)
 
-    assert Enum.member?(state.players, state.small_blind)
-    assert Enum.member?(state.players, state.current_player)
-    assert state.small_blind == state.current_player
+    assert Enum.any?(state.players, fn player -> player.id == state.small_blind_id end)
+    assert Enum.any?(state.players, fn player -> player.id == state.current_player_id end)
+    assert state.small_blind_id == state.current_player_id
   end
 
   test "advance_player/2 - current player becomes next player in the list", %{
@@ -67,10 +67,10 @@ defmodule PokerMind.Engine.TableStateTest do
 
     new_state =
       state
-      |> Map.put(:current_player, player_idx_0)
+      |> Map.put(:current_player_id, player_idx_0.id)
       |> TableState.advance_player()
 
-    assert Enum.find_index(new_state.players, fn p -> p == new_state.current_player end) == 1
+    assert Enum.find_index(new_state.players, fn p -> p.id == new_state.current_player_id end) == 1
   end
 
   test "advance_player/2 - current player becomes first player in the list if the player before was last in the list",
@@ -81,10 +81,10 @@ defmodule PokerMind.Engine.TableStateTest do
 
     new_state =
       state
-      |> Map.put(:current_player, player_idx_last)
+      |> Map.put(:current_player_id, player_idx_last.id)
       |> TableState.advance_player()
 
-    assert Enum.find_index(new_state.players, fn p -> p == new_state.current_player end) == 0
+    assert Enum.find_index(new_state.players, fn p -> p.id == new_state.current_player_id end) == 0
   end
 
   test "advance_phase/2 - valid transition from pre_flop to flop", %{

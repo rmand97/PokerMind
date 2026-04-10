@@ -16,11 +16,11 @@ defmodule PokerMind.Engine.TableState do
     # cards on the table
     :community_cards,
     # big blind
-    :small_blind,
+    :small_blind_id,
     # whose turn
-    :current_player,
+    :current_player_id,
     # bet to match
-    :current_bet,
+    :highest_raise,
     # The player who was first to act or
     # The player who bet to reset option
     :action_started_at
@@ -50,8 +50,7 @@ defmodule PokerMind.Engine.TableState do
        when is_binary(new_player_id)
        when is_list(state.players) do
     new_player =
-      %PlayerState{id: new_player_id, remaining_chips: 100}
-      |> PlayerState.set_player_value(:state, :active_in_hand)
+      PlayerState.new(new_player_id, 100)
 
     Map.put(state, :players, [new_player | state.players])
   end
@@ -73,27 +72,28 @@ defmodule PokerMind.Engine.TableState do
     small_blind = Enum.random(state.players)
 
     state
-    |> Map.put(:small_blind, small_blind)
-    |> advance_player(:current_player, small_blind)
+    |> Map.put(:small_blind_id, small_blind.id)
+    |> advance_player(:current_player_id, small_blind.id)
     |> advance_player()
   end
 
   # TODO validation function på player_state skal være en af følgende
   # :active_in_hand | :inactive_in_hand | :out_of_chips | :all_in
 
-  def advance_player(state, key \\ :current_player, player \\ nil)
-      when is_nil(player) or is_struct(player, PlayerState) do
-    from_player =
-      case player do
-        nil -> state.current_player
-        player -> player
+  def advance_player(%__MODULE__{} = state, key \\ :current_player_id, player_id \\ nil)
+      when is_nil(player_id) or is_binary(player_id) do
+    from_player_id =
+      case player_id do
+        nil -> state.current_player_id
+        player_id -> player_id
       end
 
-    index = Enum.find_index(state.players, fn p -> p == from_player end)
+
+    index = Enum.find_index(state.players, fn p -> p.id == from_player_id end)
     next_player = Enum.at(state.players, rem(index + 1, length(state.players)))
 
     state
-    |> Map.put(key, next_player)
+    |> Map.put(key, next_player.id)
   end
 
   defp new_deck(%__MODULE__{} = state) do
@@ -132,8 +132,8 @@ defmodule PokerMind.Engine.TableState do
   }
 
   # TODO opdater så det passer med ovenstående valid transitions
-  def next_phase(current_phase) do
-    case current_phase do
+  def next_phase(%__MODULE__{} = state) do
+    case state.phase do
       :pre_flop -> :flop
       :flop -> :turn
       :turn -> :river
@@ -154,13 +154,13 @@ defmodule PokerMind.Engine.TableState do
       case state.phase do
         # if pre_flop bb+1 goes first. if he is inactive -> pick next active
         :pre_flop ->
-          after_small_blind = find_next_active_player(state, state.small_blind)
-          after_big_blind = find_next_active_player(state, after_small_blind)
-          after_big_blind
+          after_small_blind_id = find_next_active_player(state, state.small_blind_id)
+          after_big_blind_id = find_next_active_player(state, after_small_blind_id)
+          after_big_blind_id
 
         _post_flop ->
           # in any other case/phase sb goes first. if he is inactive -> pick next active
-          state.small_blind
+          state.small_blind_id
       end
 
     # check if inactive pick next active
@@ -172,7 +172,7 @@ defmodule PokerMind.Engine.TableState do
         find_next_active_player(state, start_from)
       end
 
-    %{state | current_player: start_from, action_started_at: start_from}
+    %{state | current_player_id: start_from.id, action_started_at: start_from.id}
   end
 
   def round_complete?(%__MODULE__{players: players}) do
@@ -186,16 +186,16 @@ defmodule PokerMind.Engine.TableState do
     end)
   end
 
-  def find_next_active_player(%__MODULE__{players: players}, from_player) do
-    players_to_consider = acting_order_from(players, from_player)
+  def find_next_active_player(%__MODULE__{players: players}, from_player_id) when is_binary(from_player_id) do
+    players_to_consider = acting_order_from(players, from_player_id)
 
     players_to_consider
     |> Enum.find(fn player -> player.state == :active_in_hand end)
   end
 
-  defp acting_order_from(players, from_player) do
+  defp acting_order_from(players, from_player_id) when is_binary(from_player_id) do
     # Where is from_player in list
-    start = Enum.find_index(players, fn player -> player.id == from_player.id end)
+    start = Enum.find_index(players, fn player -> player.id == from_player_id end)
 
     # Split list and remove from_player
     {first_list, [_from_player | second_list]} = Enum.split(players, start)
