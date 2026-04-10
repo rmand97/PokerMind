@@ -203,4 +203,16 @@ defmodule PokerMind.Engine.TableState do
     # order rest of players in turn order
     second_list ++ first_list
   end
+
+  def complete_current_player_turn(%__MODULE__{} = state) do
+    update_in(
+      state,
+      [
+        Access.key(:players),
+        Access.find(fn player -> player.id == state.current_player_id end),
+        Access.key(:has_acted)
+      ],
+      fn _current_value -> true end
+    )
+  end
 end

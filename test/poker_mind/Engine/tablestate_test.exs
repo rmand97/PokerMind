@@ -99,4 +99,16 @@ defmodule PokerMind.Engine.TableStateTest do
     assert {:error, new_state} = TableState.advance_phase(state, :river)
     assert new_state == {:invalid_transition, :pre_flop, :river}
   end
+
+  test "complete_current_player_turn/1 - current players `has_acted` is set to `true`", %{
+    state: state
+  } do
+    current_player_id = state.current_player_id
+    current_player = Enum.find(state.players, &(&1.id == current_player_id))
+    refute current_player.has_acted
+
+    updated_state = TableState.complete_current_player_turn(state)
+    current_player_updated = Enum.find(updated_state.players, &(&1.id == current_player_id))
+    assert current_player_updated.has_acted
+  end
 end

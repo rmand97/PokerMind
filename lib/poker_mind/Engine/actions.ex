@@ -128,19 +128,10 @@ defmodule PokerMind.Engine.Actions do
       |> TableState.advance_phase(next_phase)
       |> TableState.set_current_player_for_phase()
     else
-      updated_state =
-        update_in(
-          state,
-          [
-            Access.key(:players),
-            Access.find(fn player -> player.id == state.current_player_id end),
-            Access.key(:has_acted)
-          ],
-          fn _current_value -> true end
-        )
+      updated_state = TableState.complete_current_player_turn(state)
 
-      next = TableState.find_next_active_player(updated_state, state.current_player_id)
-      %{updated_state | current_player_id: next.id}
+      next_player = TableState.find_next_active_player(updated_state, state.current_player_id)
+      %{updated_state | current_player_id: next_player.id}
     end
   end
 end
