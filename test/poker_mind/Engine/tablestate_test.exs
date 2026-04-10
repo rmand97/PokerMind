@@ -1,8 +1,6 @@
 defmodule PokerMind.Engine.TableStateTest do
   use ExUnit.Case, async: true
   alias PokerMind.Engine.TableState
-  alias PokerMind.Engine.TableState.PlayerState
-  alias PokerMind.Engine.TableState
 
   setup do
     players =
@@ -70,7 +68,8 @@ defmodule PokerMind.Engine.TableStateTest do
       |> Map.put(:current_player_id, player_idx_0.id)
       |> TableState.advance_player()
 
-    assert Enum.find_index(new_state.players, fn p -> p.id == new_state.current_player_id end) == 1
+    assert Enum.find_index(new_state.players, fn p -> p.id == new_state.current_player_id end) ==
+             1
   end
 
   test "advance_player/2 - current player becomes first player in the list if the player before was last in the list",
@@ -84,7 +83,8 @@ defmodule PokerMind.Engine.TableStateTest do
       |> Map.put(:current_player_id, player_idx_last.id)
       |> TableState.advance_player()
 
-    assert Enum.find_index(new_state.players, fn p -> p.id == new_state.current_player_id end) == 0
+    assert Enum.find_index(new_state.players, fn p -> p.id == new_state.current_player_id end) ==
+             0
   end
 
   test "advance_phase/2 - valid transition from pre_flop to flop", %{

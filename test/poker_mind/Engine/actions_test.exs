@@ -1,7 +1,6 @@
 defmodule PokerMind.Engine.ActionsTest do
   use ExUnit.Case, async: true
   alias PokerMind.Engine.TableState
-  alias PokerMind.Engine.TableState.PlayerState
   alias PokerMind.Engine.Actions
 
   setup do
@@ -60,13 +59,9 @@ defmodule PokerMind.Engine.ActionsTest do
   test "check action", %{state: init_state} do
     starting_player = init_state.current_player_id
 
-    dbg(starting_player)
-
     new_state = Actions.apply_action(init_state, :check, starting_player)
 
-    dbg(new_state.players)
-    dbg(new_state.current_player_id)
-    assert Enum.any?(new_state.players, & &1.id == starting_player and &1.has_acted)
+    assert Enum.any?(new_state.players, &(&1.id == starting_player and &1.has_acted))
     assert starting_player != new_state.current_player_id
     # get current player
     # apply check action to current player

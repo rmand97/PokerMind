@@ -89,8 +89,8 @@ defmodule PokerMindWeb.GameController do
       phase: tablestate.phase,
       pot: tablestate.pot,
       community_cards: tablestate.community_cards,
-      current_player: tablestate.current_player.id,
-      current_bet: tablestate.current_bet
+      current_player_id: tablestate.current_player_id,
+      highest_raise: tablestate.highest_raise
     }
   end
 end

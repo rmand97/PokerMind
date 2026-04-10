@@ -88,7 +88,6 @@ defmodule PokerMind.Engine.TableState do
         player_id -> player_id
       end
 
-
     index = Enum.find_index(state.players, fn p -> p.id == from_player_id end)
     next_player = Enum.at(state.players, rem(index + 1, length(state.players)))
 
@@ -186,7 +185,8 @@ defmodule PokerMind.Engine.TableState do
     end)
   end
 
-  def find_next_active_player(%__MODULE__{players: players}, from_player_id) when is_binary(from_player_id) do
+  def find_next_active_player(%__MODULE__{players: players}, from_player_id)
+      when is_binary(from_player_id) do
     players_to_consider = acting_order_from(players, from_player_id)
 
     players_to_consider

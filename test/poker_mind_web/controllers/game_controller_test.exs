@@ -51,8 +51,8 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
 
     assert Map.keys(state["game"]) == [
              "community_cards",
-             "current_bet",
-             "current_player",
+             "current_player_id",
+             "highest_raise",
              "id",
              "other_players",
              "phase",
