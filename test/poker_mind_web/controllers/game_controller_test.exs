@@ -31,7 +31,10 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     game_id = Game.id(suite_id, 1)
 
     players = [
-      "stine"
+      "stine",
+      "rolf",
+      "asbjørn",
+      "simon"
     ]
 
     {:ok, _pid, suite_id} = MatchSupport.start_match_suite!(suite_id, players, 1)
@@ -55,6 +58,21 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
              "phase",
              "player",
              "pot"
+           ]
+
+    assert Map.keys(hd(state["game"]["other_players"])) == [
+             "has_acted",
+             "id",
+             "player_state",
+             "remaining_chips"
+           ]
+
+    assert Map.keys(state["game"]["player"]) == [
+             "current_hand",
+             "has_acted",
+             "id",
+             "player_state",
+             "remaining_chips"
            ]
 
     assert state["id"] == game_id

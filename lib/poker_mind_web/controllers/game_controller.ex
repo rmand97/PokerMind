@@ -13,7 +13,6 @@ defmodule PokerMindWeb.GameController do
       coordinator_id
       |> Coordinator.next_games(player_id)
 
-    # TODO: Filter what information the player gets
     mapped_games =
       Enum.map(games, fn game ->
         map_tablestate(game, player_id)
@@ -57,26 +56,31 @@ defmodule PokerMindWeb.GameController do
   end
 
   # TODO: This is a draft
-  defp map_playerstate_own(%PlayerState{} = player) do
-    %{
-      player_id: player.player_id,
-      current_hand: player.current_hand,
+  defp map_playerstate(%PlayerState{} = player, calling_player_id) do
+    mapped_player_state = %{
+      id: player.id,
       remaining_chips: player.remaining_chips,
-      player_state: player.player_state,
+      player_state: player.state,
       has_acted: player.has_acted
     }
+
+    if player.id == calling_player_id do
+      Map.put(mapped_player_state, :current_hand, player.current_hand)
+    else
+      mapped_player_state
+    end
   end
 
   defp map_tablestate(%TableState{} = tablestate, player_id) do
     player =
       tablestate.players
-      |> Enum.find(fn player -> player.player_id == player_id end)
-      |> map_playerstate_own()
+      |> Enum.find(fn player -> player.id == player_id end)
+      |> map_playerstate(player_id)
 
     other_players =
       tablestate.players
-      |> Enum.filter(fn player -> player.player_id != player_id end)
-      |> Enum.map(fn player -> map_playerstate_others(player) end)
+      |> Enum.filter(fn player -> player.id != player_id end)
+      |> Enum.map(fn player -> map_playerstate(player, player_id) end)
 
     %{
       id: tablestate.id,
@@ -85,7 +89,7 @@ defmodule PokerMindWeb.GameController do
       phase: tablestate.phase,
       pot: tablestate.pot,
       community_cards: tablestate.community_cards,
-      current_player: tablestate.current_player.player_id,
+      current_player: tablestate.current_player.id,
       current_bet: tablestate.current_bet
     }
   end
