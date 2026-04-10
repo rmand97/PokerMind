@@ -5,8 +5,11 @@ defmodule PokerMind.Engine.Match.SupervisorTest do
 
   describe "PokerMind.Engine.Match.Supervisor" do
     test "can start multiple children" do
-      assert {:ok, pid1, id1} = MatchSupervisor.start_match_suite("suite3", ["stine"])
-      assert {:ok, pid2, id2} = MatchSupervisor.start_match_suite("suite4", ["rolf"])
+      suite1_id = UUID.uuid4()
+      suite2_id = UUID.uuid4()
+
+      assert {:ok, pid1, id1} = MatchSupervisor.start_match_suite(suite1_id, ["stine"])
+      assert {:ok, pid2, id2} = MatchSupervisor.start_match_suite(suite2_id, ["rolf"])
 
       on_exit(fn ->
         MatchSupervisor.close_match_suite(id1)

@@ -6,7 +6,8 @@ defmodule PokerMind.Engine.Match.SuiteTest do
 
   describe "Suite Tests" do
     test "has 11 children (1 coordinator + 10 games)" do
-      assert {:ok, pid, id} = MatchSupervisor.start_match_suite("suite1", ["stine"])
+      suite_id = UUID.uuid4()
+      assert {:ok, pid, id} = MatchSupervisor.start_match_suite(suite_id, ["stine"])
       on_exit(fn -> MatchSupervisor.close_match_suite(id) end)
 
       children = Supervisor.which_children(pid)
@@ -22,7 +23,8 @@ defmodule PokerMind.Engine.Match.SuiteTest do
     end
 
     test "coordinator is registered in the registry" do
-      assert {:ok, _suite_pid, id} = MatchSupervisor.start_match_suite("suite2", ["stine"])
+      suite_id = UUID.uuid4()
+      assert {:ok, _suite_pid, id} = MatchSupervisor.start_match_suite(suite_id, ["stine"])
       on_exit(fn -> MatchSupervisor.close_match_suite(id) end)
 
       assert [{coordinator_pid, nil}] =

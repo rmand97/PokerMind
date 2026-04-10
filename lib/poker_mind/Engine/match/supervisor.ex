@@ -6,11 +6,6 @@ defmodule PokerMind.Engine.Match.Supervisor do
     DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
   end
 
-  @impl true
-  def init(_init_arg) do
-    DynamicSupervisor.init(strategy: :one_for_one)
-  end
-
   def start_match_suite(suite_id, players, num_games \\ 10) do
     DynamicSupervisor.start_child(
       __MODULE__,
@@ -23,8 +18,14 @@ defmodule PokerMind.Engine.Match.Supervisor do
   end
 
   def close_match_suite(suite_id) do
-    [suite_data] = Registry.lookup(PokerMind.Engine.Registry, suite_id)
-    suite_pid = elem(suite_data, 0)
-    DynamicSupervisor.terminate_child(__MODULE__, suite_pid)
+    [{pid, _value}] = Registry.lookup(PokerMind.Engine.Registry, suite_id)
+    DynamicSupervisor.terminate_child(__MODULE__, pid)
+  end
+
+  # Callbacks
+
+  @impl true
+  def init(_init_arg) do
+    DynamicSupervisor.init(strategy: :one_for_one)
   end
 end

@@ -9,6 +9,8 @@ defmodule PokerMind.Engine.Match.Suite do
     Supervisor.start_link(__MODULE__, args, name: Engine.Registry.via(suite_id))
   end
 
+  # Callbacks
+
   @impl true
   def init(args) do
     suite_id = Keyword.fetch!(args, :id)
@@ -22,7 +24,7 @@ defmodule PokerMind.Engine.Match.Suite do
         id: {Coordinator, coordinator_id}
       )
 
-    games_children =
+    games =
       Enum.map(1..num_games, fn num ->
         game_id = Game.id(suite_id, num)
 
@@ -32,7 +34,8 @@ defmodule PokerMind.Engine.Match.Suite do
         )
       end)
 
-    children = [coordinator | games_children]
+    # coordinator should always be first to recieve messages from the games
+    children = [coordinator | games]
 
     Supervisor.init(children, strategy: :one_for_one)
   end

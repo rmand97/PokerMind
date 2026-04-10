@@ -4,8 +4,8 @@ defmodule PokerMind.Engine.Match.GameTest do
   alias PokerMind.Engine.Match.Coordinator
 
   setup do
-    coordinator_id = "coordinator"
-    suite_id = "s1"
+    suite_id = UUID.uuid4()
+    coordinator_id = Coordinator.id(suite_id)
     game_id = Game.id(suite_id, 1)
 
     start_supervised!(

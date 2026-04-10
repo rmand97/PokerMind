@@ -17,6 +17,12 @@ defmodule PokerMind.Engine.Match.Game do
     GenServer.call(Engine.Registry.via(game_id), {:apply_action, action, player})
   end
 
+  def id(suite_id, game_num) do
+    "#{suite_id}-#{game_num}"
+  end
+
+  # Callbacks
+
   @impl true
   def init(init_args) do
     coordinator_id = Keyword.fetch!(init_args, :coordinator_id)
@@ -29,10 +35,6 @@ defmodule PokerMind.Engine.Match.Game do
 
     {:ok, %{coordinator_id: coordinator_id, id: name, game: game},
      {:continue, :notify_coordinator}}
-  end
-
-  def id(suite_id, game_num) do
-    "#{suite_id}-#{game_num}"
   end
 
   @impl true
