@@ -1,42 +1,24 @@
 defmodule PokerMind.Engine.ActionsTest do
   use ExUnit.Case, async: true
   alias PokerMind.Engine.TableState
-<<<<<<< HEAD
-=======
-  alias PokerMind.Engine.TableState.PlayerState
->>>>>>> 65f310c (feat: Introduced the fold action and new playerstate struct)
   alias PokerMind.Engine.Actions
 
   setup do
     players =
-<<<<<<< HEAD
       ["stine", "rolf", "asbjørn", "simon"]
 
     id = UUID.uuid4()
     %{state: TableState.init(TableState.new(id), players)}
-=======
-      [
-        %PlayerState{id: "stine", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "rolf", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "asbjørn", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "simon", remaining_chips: 100_000, current_hand: []}
-      ]
+      ["stine", "rolf", "asbjørn", "simon"]
 
-    %{state: TableState.init(TableState.new(), players)}
->>>>>>> 65f310c (feat: Introduced the fold action and new playerstate struct)
+    %{state: TableState.init(TableState.new("Fold_test"), players)}
   end
 
   test "fold action", %{state: init_state} do
     # get current player
-<<<<<<< HEAD
     assert init_state.current_player_id != nil
     player_who_is_folding = init_state.current_player_id
     # assert init_state.small_blind +2  == init_state.current_player_id
-=======
-    assert init_state.current_player != nil
-    player_who_is_folding = init_state.current_player.id
-    # assert init_state.small_blind +2  == init_state.current_player
->>>>>>> 65f310c (feat: Introduced the fold action and new playerstate struct)
 
     # Check that current player is in players list and "active_in_hand"
     assert Enum.any?(
@@ -47,12 +29,8 @@ defmodule PokerMind.Engine.ActionsTest do
            )
 
     # apply fold action to current player
-<<<<<<< HEAD
     new_state =
       Actions.apply_action(init_state, %{type: :fold, player_id: init_state.current_player_id})
-=======
-    new_state = Actions.apply_action(init_state, :fold, init_state.current_player.id)
->>>>>>> 65f310c (feat: Introduced the fold action and new playerstate struct)
 
     # Have the player succesfully folded?
     folded_player =
@@ -66,11 +44,7 @@ defmodule PokerMind.Engine.ActionsTest do
     assert unchanged_players == original_others
 
     # Turn has advanced — new current player is not the one who folded
-<<<<<<< HEAD
     assert new_state.current_player_id != player_who_is_folding
-=======
-    assert new_state.current_player != player_who_is_folding
->>>>>>> 65f310c (feat: Introduced the fold action and new playerstate struct)
 
     # Pot size is unchanged — folding doesn't affect the pot
     assert new_state.pot == init_state.pot
@@ -87,7 +61,6 @@ defmodule PokerMind.Engine.ActionsTest do
   #   # pre player still "active"
   # end
 
-<<<<<<< HEAD
   test "check action", %{state: init_state} do
     starting_player_id = init_state.current_player_id
 
@@ -123,18 +96,6 @@ defmodule PokerMind.Engine.ActionsTest do
     assert updated_state.phase == :flop
     assert updated_state.pot == 400
   end
-=======
-  # test "check action", %{state: init_state} do
-  #   # get current player
-  #   # apply check action to current player
-
-  #   # Pot size the same
-  #   # Player stack the same
-
-  #   # new current player
-  #   # pre player still "active"
-  # end
->>>>>>> 65f310c (feat: Introduced the fold action and new playerstate struct)
 
   # test "raise action", %{state: init_state} do
   #   # get current player
