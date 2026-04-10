@@ -48,7 +48,6 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
       })
 
     assert %{"data" => state} = json_response(conn, 200)
-    # TODO: game is empty
     assert Map.keys(state["game"]) == [
              "community_cards",
              "current_bet",
