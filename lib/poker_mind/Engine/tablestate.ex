@@ -19,12 +19,8 @@ defmodule PokerMind.Engine.TableState do
     :small_blind_id,
     # whose turn
     :current_player_id,
-    # bet to match on current betting round
-    :highest_raise,
-    # TODO: Check if we can YEEEEET
-    # The player who was first to act or
-    # The player who bet to reset option
-    :action_started_at
+    # bet to match
+    :highest_raise
   ]
 
   def new(id) when is_binary(id) do
@@ -174,7 +170,7 @@ defmodule PokerMind.Engine.TableState do
         find_next_active_player(state, start_from_player)
       end
 
-    %{state | current_player_id: start_from_player.id, action_started_at: start_from_player.id}
+    %{state | current_player_id: start_from_player.id}
   end
 
   def round_complete?(%__MODULE__{players: players}) do
