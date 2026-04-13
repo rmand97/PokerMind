@@ -111,4 +111,26 @@ defmodule PokerMind.Engine.TableStateTest do
     current_player_updated = Enum.find(updated_state.players, &(&1.id == current_player_id))
     assert current_player_updated.has_acted
   end
+
+  test "add_to_pot/3 - amount is deducted from remaining_chips and is added to current_bet and pot",
+       %{
+         state: state
+       } do
+    updated_state =
+      state
+      |> TableState.add_to_pot("stine", 20)
+      |> TableState.add_to_pot("rolf", 50)
+
+    updated_player1 = TableState.get_player(updated_state, "stine")
+    updated_player2 = TableState.get_player(updated_state, "rolf")
+
+    # each player starts with 100 chips
+    assert updated_player1.remaining_chips == 80
+    assert updated_player1.current_bet == 20
+
+    assert updated_player2.remaining_chips == 50
+    assert updated_player2.current_bet == 50
+
+    assert updated_state.pot == 70
+  end
 end

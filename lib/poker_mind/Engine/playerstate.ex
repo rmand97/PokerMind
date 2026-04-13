@@ -19,8 +19,9 @@ defmodule PokerMind.Engine.TableState.PlayerState do
     %__MODULE__{
       id: id,
       remaining_chips: remaining_chips,
-      has_acted: false,
-      state: :active_in_hand
+      state: :active_in_hand,
+      current_bet: 0,
+      has_acted: false
     }
   end
 
@@ -37,11 +38,21 @@ defmodule PokerMind.Engine.TableState.PlayerState do
     Map.put(player, key, new_value)
   end
 
-  def deduct_chips(%__MODULE__{} = state, player_id, amount) do
+  def deduct_chips(%TableState{} = state, player_id, amount)
+      when is_integer(amount) and amount > 0 do
     update_in(
       state,
       [Access.key(:players), Access.find(&(&1.id == player_id)), Access.key(:remaining_chips)],
       fn current_chips -> current_chips - amount end
+    )
+  end
+
+  def update_current_bet(%TableState{} = state, player_id, amount)
+      when is_integer(amount) and amount > 0 do
+    update_in(
+      state,
+      [Access.key(:players), Access.find(&(&1.id == player_id)), Access.key(:current_bet)],
+      fn current_bet -> current_bet + amount end
     )
   end
 end

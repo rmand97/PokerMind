@@ -23,8 +23,17 @@ defmodule PokerMind.Engine.TableState do
     :highest_raise
   ]
 
+  # TODO: set highest raise to big blind
   def new(id) when is_binary(id) do
-    %__MODULE__{id: id, phase: :pre_flop, players: [], pot: 0, deck: [], community_cards: []}
+    %__MODULE__{
+      id: id,
+      phase: :pre_flop,
+      players: [],
+      pot: 0,
+      deck: [],
+      community_cards: [],
+      highest_raise: 0
+    }
   end
 
   def init(%__MODULE__{} = state, init_players) when is_list(init_players) do
@@ -217,5 +226,13 @@ defmodule PokerMind.Engine.TableState do
 
   def get_player(%__MODULE__{} = state, player_id) when is_binary(player_id) do
     Enum.find(state.players, &(&1.id == player_id))
+  end
+
+  def add_to_pot(%__MODULE__{} = state, player_id, amount)
+      when is_integer(amount) and amount > 0 do
+    state
+    |> PlayerState.deduct_chips(player_id, amount)
+    |> PlayerState.update_current_bet(player_id, amount)
+    |> Map.put(:pot, state.pot + amount)
   end
 end
