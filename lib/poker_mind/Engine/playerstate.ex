@@ -38,7 +38,6 @@ defmodule PokerMind.Engine.TableState.PlayerState do
     Map.put(player, key, new_value)
   end
 
-
   def deduct_chips(%TableState{} = state, player_id, amount)
       when is_integer(amount) and amount > 0 do
     update_in(

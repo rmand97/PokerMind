@@ -15,17 +15,13 @@ defmodule PokerMind.Engine.TableState do
     :deck,
     # cards on the table
     :community_cards,
-    # big blind
+    # Player who is sblind
     :small_blind_id,
     # whose turn
     :current_player_id,
     # bet to match
     :highest_raise,
     :big_blind_amount
-    :current_bet,
-    # The player who was first to act or
-    # The player who bet to reset option
-    :action_started_at
   ]
 
   def new(id) when is_binary(id) do
@@ -63,8 +59,7 @@ defmodule PokerMind.Engine.TableState do
   defp add_player(%__MODULE__{} = state, new_player_id)
        when is_binary(new_player_id)
        when is_list(state.players) do
-
-    new_player = PlayerState.set_player_value(new_player_id, :state, :active_in_hand)
+    new_player = PlayerState.new(new_player_id, 100)
 
     Map.put(state, :players, [new_player | state.players])
   end
@@ -188,25 +183,6 @@ defmodule PokerMind.Engine.TableState do
       end
 
     %{state | current_player_id: start_from_player.id}
-    start_from =
-      case state.phase do
-        :pre_flop ->
-          after_small_blind = find_next_active_player(state, state.small_blind)
-          after_big_blind = find_next_active_player(state, after_small_blind)
-          after_big_blind
-
-        _post_flop ->
-          state.small_blind
-      end
-
-    start_from =
-      if start_from.state == :active_in_hand do
-        start_from
-      else
-        find_next_active_player(state, start_from)
-      end
-
-    %{state | current_player: start_from, action_started_at: start_from}
   end
 
   def round_complete?(%__MODULE__{players: players}) do
@@ -268,15 +244,5 @@ defmodule PokerMind.Engine.TableState do
   def update_highest_raise(%__MODULE__{} = state, amount)
       when is_integer(amount) and amount > 0 do
     Map.put(state, :highest_raise, amount)
-  end
-
-  defp how_the_turn_tables(players, from_player) do
-    # Where is from_player in list
-
-    start = Enum.find_index(players, fn player -> player.id == from_player.id end)
-
-    {first_list, [_from_player | second_list]} = Enum.split(players, start)
-
-    second_list ++ first_list
   end
 end

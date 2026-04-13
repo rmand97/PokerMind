@@ -2,16 +2,16 @@ defmodule PokerMind.Engine.Actions do
   alias PokerMind.Engine.TableState
   alias PokerMind.Engine.TableState.PlayerState
 
-  # def apply_action(%TableState{} = state, %{type: :raise, player_id: player_id, amount: amount}) do
-  #   with :ok <- validate_turn(player_id) do
-  #     #  :ok <- validate_raise(phase, player_id, amount) do
-  #     state.phase
-  #     |> deduct_chips(player_id, amount)
-  #     |> add_to_pot(amount)
-  #     |> update_current_raise(amount)
-  #     |> advance_player_turn(:raise)
-  #   end
-  # end
+  def apply_action(%TableState{} = state, %{type: :raise, player_id: player_id, amount: amount}) do
+    with :ok <- validate_turn(state, player_id),
+         :ok <- validate_amount(state, player_id, amount),
+         :ok <- validate_raise(state, player_id, amount) do
+      state.phase
+      |> TableState.add_to_pot(player_id, amount)
+      |> TableState.update_highest_raise(amount)
+      |> advance_player_turn(:raise)
+    end
+  end
 
   def apply_action(%TableState{} = state, %{type: :fold, player_id: player_id})
       when is_binary(player_id) do
@@ -22,20 +22,15 @@ defmodule PokerMind.Engine.Actions do
     end
   end
 
-  defp set_player_state(%TableState{} = state, new_player_state) do
-    # get state.current_player
-    # set current.player.player_state = new_player_state
+  def apply_action(%TableState{} = state, %{type: :call, player_id: player_id, amount: amount})
+      when is_binary(player_id) do
+    with :ok <- validate_turn(state, player_id),
+         :ok <- validate_amount(state, player_id, amount) do
+      state.phase
+      |> TableState.add_to_pot(player_id, amount)
+      |> advance_player_turn(:call)
+    end
   end
-
-  # def apply_action(%TableState{} = state, %{type: :call, player_id: player_id, amount: amount})
-  #     when is_binary(player_id) do
-  #   with :ok <- validate_turn(player_id) do
-  #     state.phase
-  #     |> deduct_chips(player_id, amount)
-  #     |> add_to_pot(amount)
-  #     |> advance_player_turn(:call)
-  #   end
-  # end
 
   def apply_action(%TableState{} = state, %{type: :check, player_id: player_id})
       when is_binary(player_id) do
@@ -59,55 +54,53 @@ defmodule PokerMind.Engine.Actions do
 
   # move to table state
   defp validate_turn(state, player_id) when is_binary(player_id) do
-    player = Enum.find(state.players, &(&1.id == player_id))
+    player = TableState.get_player(state, player_id)
 
-    if player_id != state.current_player_id or player.has_acted do
-      {:error, {:action_out_of_turn, "It's not your turn"}}
-    else
-      :ok
+    cond do
+      player == nil ->
+        {:error, {:invalid_player, "Player not found at the table"}}
+
+      player.state != :active_in_hand ->
+        {:error, {:player_not_active, "Player is not active in the hand"}}
+
+      player.has_acted ->
+        {:error, {:player_already_acted, "Player has already acted in this betting round"}}
+
+      player_id != state.current_player_id ->
+        {:error, {:action_out_of_turn, "Awaiting action from player #{state.current_player_id}"}}
+
+      true ->
+        :ok
     end
   end
 
-  # defp validate_amount(state, player_id, amount) do
-  #   player = Enum.find(state.players, &(&1.id == player_id))
+  defp validate_amount(state, player_id, amount) do
+    player = TableState.get_player(state, player_id)
 
-  #   cond do
-  #     not is_integer(amount) ->
-  #       {:error, {:not_integer, "Only supports integers, got: #{inspect(amount)}"}}
+    cond do
+      amount < player.remaining_chips -> :ok
+      amount == player.remaining_chips -> :ok
+      true -> {:error, "Action requires more chips than player has remaining"}
+    end
+  end
 
-  #     amount <= 0 ->
-  #       {:error, {:not_positive, "Only supports positive integers, got: #{inspect(amount)}"}}
+  defp validate_raise(state, player_id, amount) do
+    player = TableState.get_player(state, player_id)
 
-  #     player.remaining_chips < amount ->
-  #       {:error,
-  #        {:missing_chips,
-  #         "Player #{player_id} does not have enough chips left. Has: #{player.remaining_chips}, bid: #{amount}"}}
+    cond do
+      player.current_bet == amount ->
+        {:error, "Current_bet = new raise amount - did we already perform this bet?"}
 
-  #     true ->
-  #       :ok
-  #   end
-  # end
+      amount < 2 * state.highest_raise ->
+        {:error, "Not a valid raise - assume bet size too small"}
 
-  # pseudo kode #TODO
-  # defp validate_raise(player_id, amount \\ 0) do
-  #   if(amount > {2 * TableState.big_blind()}) do
-  #     # raise større end min raise
-  #     :ok
-  #   else
-  #     if amount < TableState.players(player_id).stack_size do
-  #       # raise mindre end stack
-  #       # Check if divisible by chip denomination
-  #       :ok
-  #     else
-  #       if(amount == TableState.players(player_id).stack_size) do
-  #         # all in
-  #         :ok
-  #       else
-  #         {:error, "Bet larger than stack size"}
-  #       end
-  #     end
-  #   end
-  # end
+      amount >= 2 * state.highest_raise ->
+        :ok
+
+      true ->
+        {:error, "Not a valid action"}
+    end
+  end
 
   # input: player_id, amount
   # defp deduct_chips(player_id, amount) do

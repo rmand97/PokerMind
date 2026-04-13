@@ -5,17 +5,10 @@ defmodule PokerMind.Engine.TableStateTest do
   setup do
     players =
       [
-<<<<<<< HEAD
         "stine",
         "rolf",
         "asbjørn",
         "simon"
-=======
-        %PlayerState{id: "stine", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "rolf", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "asbjørn", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "simon", remaining_chips: 100_000, current_hand: []}
->>>>>>> 65f310c (feat: Introduced the fold action and new playerstate struct)
       ]
 
     %{state: TableState.init(TableState.new("123"), players)}
@@ -54,13 +47,8 @@ defmodule PokerMind.Engine.TableStateTest do
   test "set_blinds/1 - exactly 2 players, a player is chosen as both small blind and current player" do
     players =
       [
-<<<<<<< HEAD
         "stine",
         "rolf"
-=======
-        %PlayerState{id: "stine", remaining_chips: 100_000, current_hand: []},
-        %PlayerState{id: "rolf", remaining_chips: 100_000, current_hand: []}
->>>>>>> 65f310c (feat: Introduced the fold action and new playerstate struct)
       ]
 
     state = TableState.init(TableState.new("123"), players)

@@ -9,7 +9,7 @@ defmodule PokerMind.Engine.ActionsTest do
 
     id = UUID.uuid4()
     %{state: TableState.init(TableState.new(id), players)}
-      ["stine", "rolf", "asbjørn", "simon"]
+    ["stine", "rolf", "asbjørn", "simon"]
 
     %{state: TableState.init(TableState.new("Fold_test"), players)}
   end
