@@ -34,13 +34,11 @@ defmodule PokerMind.Engine.Actions do
     with :ok <- validate_turn(state, player_id) do
       player = Enum.find(state.players, &(&1.id == player_id))
 
-      cond do
-        state.highest_raise != player.current_bet ->
-          {:error, {:something, "something"}}
-
-        true ->
-          state
-          |> advance_player_turn(:check)
+      if state.highest_raise != player.current_bet do
+        {:error, {:something, "something"}}
+      else
+        state
+        |> advance_player_turn(:check)
       end
     end
   end
