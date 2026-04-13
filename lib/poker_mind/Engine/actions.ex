@@ -35,7 +35,9 @@ defmodule PokerMind.Engine.Actions do
       player = Enum.find(state.players, &(&1.id == player_id))
 
       if state.highest_raise != player.current_bet do
-        {:error, {:something, "something"}}
+        {:error,
+         {:current_bet_too_low,
+          "Cannot check because your current bet #{player.current_bet} does not match the required highest raise #{state.highest_raise}"}}
       else
         state
         |> advance_player_turn(:check)
@@ -51,15 +53,10 @@ defmodule PokerMind.Engine.Actions do
   defp validate_turn(state, player_id) when is_binary(player_id) do
     player = Enum.find(state.players, &(&1.id == player_id))
 
-    cond do
-      player_id != state.current_player_id ->
-        {:error, {:action_out_of_turn, "player_id != current_player - its not your turn"}}
-
-      player.has_acted ->
-        {:error, {:not_possible, "Can't act in current position"}}
-
-      true ->
-        :ok
+    if player_id != state.current_player_id or player.has_acted do
+      {:error, {:action_out_of_turn, "It's not your turn"}}
+    else
+      :ok
     end
   end
 
