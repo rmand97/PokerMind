@@ -121,8 +121,8 @@ defmodule PokerMind.Engine.TableStateTest do
       |> TableState.add_to_pot("stine", 20)
       |> TableState.add_to_pot("rolf", 50)
 
-    updated_player1 = Enum.find(updated_state.players, &(&1.id == "stine"))
-    updated_player2 = Enum.find(updated_state.players, &(&1.id == "rolf"))
+    updated_player1 = TableState.get_player(updated_state, "stine")
+    updated_player2 = TableState.get_player(updated_state, "rolf")
 
     # each player starts with 100 chips
     assert updated_player1.remaining_chips == 80
