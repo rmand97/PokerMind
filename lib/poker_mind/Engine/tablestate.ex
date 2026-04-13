@@ -24,7 +24,6 @@ defmodule PokerMind.Engine.TableState do
     :big_blind_amount
   ]
 
-  # TODO: set highest raise to big blind
   def new(id) when is_binary(id) do
     # when we initialize a new table, highest_raise and big_blind_amount is the same
     big_blind_amount = 100
