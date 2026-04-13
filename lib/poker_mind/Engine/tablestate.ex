@@ -241,4 +241,9 @@ defmodule PokerMind.Engine.TableState do
     |> PlayerState.update_current_bet(player_id, amount)
     |> Map.put(:pot, state.pot + amount_difference)
   end
+
+  def update_highest_raise(%__MODULE__{} = state, amount)
+      when is_integer(amount) and amount > 0 do
+    Map.put(state, :highest_raise, amount)
+  end
 end
