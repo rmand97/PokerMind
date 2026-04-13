@@ -61,7 +61,8 @@ defmodule PokerMind.Engine.ActionsTest do
   test "check action", %{state: init_state} do
     starting_player_id = init_state.current_player_id
 
-    new_state = Actions.apply_action(init_state, %{type: :check, player_id: starting_player_id})
+    state = TableState.add_to_pot(init_state, starting_player_id, 100)
+    new_state = Actions.apply_action(state, %{type: :check, player_id: starting_player_id})
 
     assert Enum.any?(new_state.players, &(&1.id == starting_player_id and &1.has_acted))
     assert starting_player_id != new_state.current_player_id
@@ -72,7 +73,7 @@ defmodule PokerMind.Engine.ActionsTest do
              &(&1.id == starting_player_id and &1.state == :active_in_hand)
            )
 
-    assert new_state.pot == init_state.pot
+    assert new_state.pot == 100
   end
 
   test "all players :check and we go to flop phase", %{state: init_state} do
@@ -81,6 +82,8 @@ defmodule PokerMind.Engine.ActionsTest do
     updated_state =
       Enum.reduce(1..num_player, init_state, fn _, state ->
         current_player_id = state.current_player_id
+        # add to pot just to make sure they can check
+        state = TableState.add_to_pot(state, current_player_id, 100)
 
         new_state = Actions.apply_action(state, %{type: :check, player_id: current_player_id})
         new_state
@@ -88,6 +91,7 @@ defmodule PokerMind.Engine.ActionsTest do
 
     assert Enum.all?(updated_state.players, &(not &1.has_acted))
     assert updated_state.phase == :flop
+    assert updated_state.pot == 400
   end
 
   # test "raise action", %{state: init_state} do

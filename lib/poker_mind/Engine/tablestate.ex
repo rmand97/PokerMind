@@ -20,11 +20,15 @@ defmodule PokerMind.Engine.TableState do
     # whose turn
     :current_player_id,
     # bet to match
-    :highest_raise
+    :highest_raise,
+    :big_blind_amount
   ]
 
   # TODO: set highest raise to big blind
   def new(id) when is_binary(id) do
+    # when we initialize a new table, highest_raise and big_blind_amount is the same
+    big_blind_amount = 100
+
     %__MODULE__{
       id: id,
       phase: :pre_flop,
@@ -32,7 +36,8 @@ defmodule PokerMind.Engine.TableState do
       pot: 0,
       deck: [],
       community_cards: [],
-      highest_raise: 0
+      highest_raise: big_blind_amount,
+      big_blind_amount: big_blind_amount
     }
   end
 
