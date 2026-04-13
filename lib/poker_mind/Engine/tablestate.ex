@@ -170,7 +170,7 @@ defmodule PokerMind.Engine.TableState do
         find_next_active_player(state, start_from_player)
       end
 
-    %{state | current_player_id: start_from.id}
+    %{state | current_player_id: start_from_player.id}
   end
 
   def round_complete?(%__MODULE__{players: players}) do
