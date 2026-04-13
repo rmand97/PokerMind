@@ -2,7 +2,7 @@ defmodule PokerMind.Engine.Actions do
   alias PokerMind.Engine.TableState
   alias PokerMind.Engine.TableState.PlayerState
 
-  # def apply_action(%TableState{} = state, {:raise, amount}, player_id) do
+  # def apply_action(%TableState{} = state, %{type: :raise, player_id: player_id, amount: amount}) do
   #   with :ok <- validate_turn(player_id) do
   #     #  :ok <- validate_raise(phase, player_id, amount) do
   #     state.phase
@@ -13,7 +13,8 @@ defmodule PokerMind.Engine.Actions do
   #   end
   # end
 
-  def apply_action(%TableState{} = state, :fold, player_id) when is_binary(player_id) do
+  def apply_action(%TableState{} = state, %{type: :fold, player_id: player_id})
+      when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id) do
       state
       |> TableState.set_player_value(player_id, :state, :inactive_in_hand)
@@ -21,7 +22,8 @@ defmodule PokerMind.Engine.Actions do
     end
   end
 
-  # def apply_action(%TableState{} = state, :call, amount, player_id) do
+  # def apply_action(%TableState{} = state, %{type: :call, player_id: player_id, amount: amount})
+  #     when is_binary(player_id) do
   #   with :ok <- validate_turn(player_id) do
   #     state.phase
   #     |> deduct_chips(player_id, amount)
@@ -30,7 +32,8 @@ defmodule PokerMind.Engine.Actions do
   #   end
   # end
 
-  def apply_action(%TableState{} = state, :check, player_id) do
+  def apply_action(%TableState{} = state, %{type: :check, player_id: player_id})
+      when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id) do
       player = Enum.find(state.players, &(&1.id == player_id))
 
@@ -117,9 +120,10 @@ defmodule PokerMind.Engine.Actions do
   #   TableState.current_bet = amount
   # end
 
-  # TODO
   defp advance_player_turn(%TableState{} = state, _action) do
-    if TableState.round_complete?(state) do
+    updated_state = TableState.complete_current_player_turn(state)
+
+    if TableState.round_complete?(updated_state) do
       next_phase = TableState.next_phase(state)
 
       state
@@ -127,8 +131,6 @@ defmodule PokerMind.Engine.Actions do
       |> TableState.advance_phase(next_phase)
       |> TableState.set_current_player_for_phase()
     else
-      updated_state = TableState.complete_current_player_turn(state)
-
       next_player = TableState.find_next_active_player(updated_state, state.current_player_id)
       %{updated_state | current_player_id: next_player.id}
     end

@@ -7,7 +7,8 @@ defmodule PokerMind.Engine.ActionsTest do
     players =
       ["stine", "rolf", "asbjørn", "simon"]
 
-    %{state: TableState.init(TableState.new("Fold_test"), players)}
+    id = UUID.uuid4()
+    %{state: TableState.init(TableState.new(id), players)}
   end
 
   test "fold action", %{state: init_state} do
@@ -25,7 +26,8 @@ defmodule PokerMind.Engine.ActionsTest do
            )
 
     # apply fold action to current player
-    new_state = Actions.apply_action(init_state, :fold, init_state.current_player_id)
+    new_state =
+      Actions.apply_action(init_state, %{type: :fold, player_id: init_state.current_player_id})
 
     # Have the player succesfully folded?
     folded_player =
@@ -57,20 +59,35 @@ defmodule PokerMind.Engine.ActionsTest do
   # end
 
   test "check action", %{state: init_state} do
-    starting_player = init_state.current_player_id
+    starting_player_id = init_state.current_player_id
 
-    new_state = Actions.apply_action(init_state, :check, starting_player)
+    new_state = Actions.apply_action(init_state, %{type: :check, player_id: starting_player_id})
 
-    assert Enum.any?(new_state.players, &(&1.id == starting_player and &1.has_acted))
-    assert starting_player != new_state.current_player_id
-    # get current player
-    # apply check action to current player
+    assert Enum.any?(new_state.players, &(&1.id == starting_player_id and &1.has_acted))
+    assert starting_player_id != new_state.current_player_id
 
-    # Pot size the same
-    # Player stack the same
+    # check that starting player is still :active_in_hand
+    assert Enum.any?(
+             new_state.players,
+             &(&1.id == starting_player_id and &1.state == :active_in_hand)
+           )
 
-    # new current player
-    # pre player still "active"
+    assert new_state.pot == init_state.pot
+  end
+
+  test "all players :check and we go to flop phase", %{state: init_state} do
+    num_player = length(init_state.players)
+    # all players check
+    updated_state =
+      Enum.reduce(1..num_player, init_state, fn _, state ->
+        current_player_id = state.current_player_id
+
+        new_state = Actions.apply_action(state, %{type: :check, player_id: current_player_id})
+        new_state
+      end)
+
+    assert Enum.all?(updated_state.players, &(not &1.has_acted))
+    assert updated_state.phase == :flop
   end
 
   # test "raise action", %{state: init_state} do
