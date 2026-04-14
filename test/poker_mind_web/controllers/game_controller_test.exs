@@ -26,6 +26,12 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
            }
   end
 
+  test "GET /api/next_games with non-existent suite_id returns 404", %{conn: conn} do
+    conn = get(conn, "/api/next_games", %{"player_id" => "rolf", "suite_id" => UUID.uuid4()})
+
+    assert json_response(conn, :not_found) == %{"error" => "coordinator not found"}
+  end
+
   test "POST /api/action with player_id, game_id and action", %{conn: conn} do
     suite_id = UUID.uuid4()
     game_id = Game.id(suite_id, 1)
@@ -76,6 +82,17 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
            ]
 
     assert state["id"] == game_id
+  end
+
+  test "POST /api/action with non-existent game_id returns 404", %{conn: conn} do
+    conn =
+      post(conn, "/api/action", %{
+        "player_id" => "rolf",
+        "game_id" => UUID.uuid4(),
+        "action" => "fold"
+      })
+
+    assert json_response(conn, :not_found) == %{"error" => "Game not found"}
   end
 
   test "POST /api/action without player_id, game_id and action", %{conn: conn} do

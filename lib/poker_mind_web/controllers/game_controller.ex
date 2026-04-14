@@ -9,16 +9,18 @@ defmodule PokerMindWeb.GameController do
   def next_games(conn, %{"player_id" => player_id, "suite_id" => suite_id}) do
     coordinator_id = Coordinator.id(suite_id)
 
-    games =
-      coordinator_id
-      |> Coordinator.next_games(player_id)
+    case Coordinator.next_games(coordinator_id, player_id) do
+      {:error, msg} when msg in [:game_not_found, :coordinator_not_found] ->
+        error_msg = msg |> to_string() |> String.replace("_", " ")
 
-    mapped_games =
-      Enum.map(games, fn game ->
-        map_tablestate(game, player_id)
-      end)
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: error_msg})
 
-    json(conn, %{data: mapped_games})
+      games ->
+        mapped_games = Enum.map(games, fn game -> map_tablestate(game, player_id) end)
+        json(conn, %{data: mapped_games})
+    end
   end
 
   def next_games(conn, _params) do
@@ -36,6 +38,11 @@ defmodule PokerMindWeb.GameController do
       {:ok, state} ->
         mapped_state = %{state | game: map_tablestate(state.game, player_id)}
         json(conn, %{data: mapped_state})
+
+      {:error, :game_not_found} ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Game not found"})
 
       {:error, reason} ->
         conn
