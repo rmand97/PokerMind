@@ -17,6 +17,11 @@ defmodule PokerMindWeb.Router do
     plug OpenApiSpex.Plug.PutApiSpec, module: PokerMindWeb.ApiSpec
   end
 
+  pipeline :api_public do
+    plug :accepts, ["json"]
+    plug OpenApiSpex.Plug.PutApiSpec, module: PokerMindWeb.ApiSpec
+  end
+
   scope "/" do
     pipe_through :browser
     get "/", PokerMindWeb.GameController, :index
@@ -26,9 +31,13 @@ defmodule PokerMindWeb.Router do
   scope "/api" do
     pipe_through :api
 
-    get "/next_games", GameController, :next_games
-    get "/suites", GameController, :suites
-    post "/action", GameController, :perform_action
+    get "/next_games", PokerMindWeb.GameController, :next_games
+    get "/suites", PokerMindWeb.GameController, :suites
+    post "/action", PokerMindWeb.GameController, :perform_action
+  end
+
+  scope "/api" do
+    pipe_through :api_public
 
     get "/openapi", OpenApiSpex.Plug.RenderSpec, []
   end
