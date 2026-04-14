@@ -32,6 +32,8 @@ defmodule PokerMindWeb.ConnCase do
   end
 
   setup _tags do
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+    secret = Application.get_env(:poker_mind, :api_auth_secret)
+    conn = Phoenix.ConnTest.build_conn() |> Plug.Conn.put_req_header("authorization", secret)
+    {:ok, conn: conn}
   end
 end

@@ -1,5 +1,6 @@
 defmodule PokerMindWeb.Router do
   use PokerMindWeb, :router
+  import PokerMindWeb.ApiAuth, only: [fetch_token_and_verify: 2]
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -12,6 +13,7 @@ defmodule PokerMindWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug :fetch_token_and_verify
   end
 
   scope "/api", PokerMindWeb do
