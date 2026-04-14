@@ -18,6 +18,7 @@ defmodule PokerMindWeb.Router do
     pipe_through :api
 
     get "/next_games", GameController, :next_games
+    get "/suites", GameController, :suites
     post "/action", GameController, :perform_action
   end
 

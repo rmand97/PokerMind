@@ -78,6 +78,26 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     assert state["id"] == game_id
   end
 
+  test "GET /api/suites returns all running suites with their players", %{conn: conn} do
+    suite1_id = UUID.uuid4()
+    suite2_id = UUID.uuid4()
+    players1 = ["rolf", "stine"]
+    players2 = ["asbjørn"]
+
+    {:ok, _pid, ^suite1_id} = MatchSupport.start_match_suite!(suite1_id, players1)
+    {:ok, _pid, ^suite2_id} = MatchSupport.start_match_suite!(suite2_id, players2)
+
+    on_exit(fn ->
+      MatchSupervisor.close_match_suite(suite1_id)
+      MatchSupervisor.close_match_suite(suite2_id)
+    end)
+
+    conn = get(conn, "/api/suites")
+    assert %{"data" => suites} = json_response(conn, 200)
+    assert suites[suite1_id] == players1
+    assert suites[suite2_id] == players2
+  end
+
   test "POST /api/action without player_id, game_id and action", %{conn: conn} do
     conn = post(conn, "/api/action")
 

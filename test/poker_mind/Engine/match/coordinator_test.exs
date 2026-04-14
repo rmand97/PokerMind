@@ -10,7 +10,9 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
       coordinator_id = UUID.uuid4()
       num_games = 2
 
-      start_supervised!({Coordinator, name: coordinator_id, num_games: num_games})
+      start_supervised!(
+        {Coordinator, name: coordinator_id, num_games: num_games, players: ["rolf"]}
+      )
 
       assert %{all_games_ready?: false, num_games: ^num_games, games: %{}} =
                Coordinator.get_state(coordinator_id)
@@ -19,7 +21,7 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
     test "newly initialized Coordinator is ready when all games are ready" do
       coordinator_id = UUID.uuid4()
 
-      start_supervised!({Coordinator, name: coordinator_id, num_games: 2})
+      start_supervised!({Coordinator, name: coordinator_id, num_games: 2, players: ["rolf"]})
 
       game1_id = UUID.uuid4()
       Coordinator.register_game_ready(coordinator_id, game1_id, "rolf")
@@ -36,7 +38,9 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
       player = "rolf"
       num_games = 2
 
-      start_supervised!({Coordinator, name: coordinator_id, num_games: num_games})
+      start_supervised!(
+        {Coordinator, name: coordinator_id, num_games: num_games, players: [player]}
+      )
 
       assert %{} = _game_state = Coordinator.get_state(coordinator_id)
       start_supervised!({Game, name: game_id, players: [player], coordinator_id: coordinator_id})
@@ -64,7 +68,9 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
       num_games = 15
       take_amount = 5
 
-      start_supervised!({Coordinator, name: coordinator_id, num_games: num_games})
+      start_supervised!(
+        {Coordinator, name: coordinator_id, num_games: num_games, players: ["stine", "rolf"]}
+      )
 
       Enum.each(1..num_games, fn num ->
         players =
@@ -96,7 +102,9 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
     winning_player = "rolf"
     num_games = 1
 
-    start_supervised!({Coordinator, name: coordinator_id, num_games: num_games})
+    start_supervised!(
+      {Coordinator, name: coordinator_id, num_games: num_games, players: [winning_player]}
+    )
 
     start_supervised!(
       Supervisor.child_spec(
