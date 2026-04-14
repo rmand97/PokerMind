@@ -22,11 +22,25 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
       start_supervised!({Coordinator, name: coordinator_id, num_games: 2})
 
       game1_id = UUID.uuid4()
-      Coordinator.register_game_ready(coordinator_id, game1_id, "rolf")
+
+      start_supervised!(
+        Supervisor.child_spec(
+          {Game, name: game1_id, players: ["rolf"], coordinator_id: coordinator_id},
+          id: {Game, game1_id}
+        )
+      )
+
       refute Coordinator.get_state(coordinator_id).all_games_ready?
 
       game2_id = UUID.uuid4()
-      Coordinator.register_game_ready(coordinator_id, game2_id, "rolf")
+
+      start_supervised!(
+        Supervisor.child_spec(
+          {Game, name: game2_id, players: ["rolf"], coordinator_id: coordinator_id},
+          id: {Game, game2_id}
+        )
+      )
+
       assert Coordinator.get_state(coordinator_id).all_games_ready?
     end
 
@@ -113,5 +127,50 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
     assert is_nil(game.next_player)
     assert game.winner == winning_player
     assert Coordinator.get_state(coordinator_id).all_games_finished?
+  end
+
+  describe "ensure_exists" do
+    test "next_games/3 returns {:error, :coordinator_not_found} when coordinator does not exist" do
+      coordinator_id = UUID.uuid4()
+      player = "rolf"
+
+      assert {:error, :coordinator_not_found} = Coordinator.next_games(coordinator_id, player, 5)
+    end
+
+    test "register_game_ready/3 returns {:error, :coordinator_not_found} when coordinator does not exist" do
+      coordinator_id = UUID.uuid4()
+      game_id = UUID.uuid4()
+
+      assert {:error, :coordinator_not_found} =
+               Coordinator.register_game_ready(coordinator_id, game_id, "rolf")
+    end
+
+    test "register_game_ready/3 returns {:error, :game_not_found} when coordinator exists but game does not" do
+      coordinator_id = UUID.uuid4()
+      game_id = UUID.uuid4()
+
+      start_supervised!({Coordinator, name: coordinator_id, num_games: 1})
+
+      assert {:error, :game_not_found} =
+               Coordinator.register_game_ready(coordinator_id, game_id, "rolf")
+    end
+
+    test "register_game_finished/3 returns {:error, :coordinator_not_found} when coordinator does not exist" do
+      coordinator_id = UUID.uuid4()
+      game_id = UUID.uuid4()
+
+      assert {:error, :coordinator_not_found} =
+               Coordinator.register_game_finished(coordinator_id, game_id, "rolf")
+    end
+
+    test "register_game_finished/3 returns {:error, :game_not_found} when coordinator exists but game does not" do
+      coordinator_id = UUID.uuid4()
+      game_id = UUID.uuid4()
+
+      start_supervised!({Coordinator, name: coordinator_id, num_games: 1})
+
+      assert {:error, :game_not_found} =
+               Coordinator.register_game_finished(coordinator_id, game_id, "rolf")
+    end
   end
 end

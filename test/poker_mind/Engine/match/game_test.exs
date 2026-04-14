@@ -33,4 +33,16 @@ defmodule PokerMind.Engine.Match.GameTest do
       assert Game.get_state(test_vars.game_id) != nil
     end
   end
+
+  describe "ensure_exists" do
+    test "get_state/1 returns {:error, :game_not_found} when game does not exist" do
+      non_existing_id = UUID.uuid4()
+      assert {:error, :game_not_found} = Game.get_state(non_existing_id)
+    end
+
+    test "apply_action/3 returns {:error, :game_not_found} when game does not exist" do
+      non_existing_id = UUID.uuid4()
+      assert {:error, :game_not_found} = Game.apply_action(non_existing_id, "fold", "stine")
+    end
+  end
 end

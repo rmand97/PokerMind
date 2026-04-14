@@ -10,15 +10,28 @@ defmodule PokerMind.Engine.Match.Game do
   end
 
   def get_state(game_id) do
-    GenServer.call(Engine.Registry.via(game_id), :get_state)
+    ensure_exists(game_id, fn ->
+      GenServer.call(Engine.Registry.via(game_id), :get_state)
+    end)
   end
 
   def apply_action(game_id, action, player) do
-    GenServer.call(Engine.Registry.via(game_id), {:apply_action, action, player})
+    ensure_exists(game_id, fn ->
+      GenServer.call(Engine.Registry.via(game_id), {:apply_action, action, player})
+    end)
   end
 
   def id(suite_id, game_num) do
     "#{suite_id}-#{game_num}"
+  end
+
+  defp ensure_exists(game_id, fun)
+       when is_binary(game_id) and is_function(fun) do
+    if Registry.lookup(PokerMind.Engine.Registry, game_id) == [] do
+      {:error, :game_not_found}
+    else
+      fun.()
+    end
   end
 
   # Callbacks

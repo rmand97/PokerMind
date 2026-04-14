@@ -9,7 +9,9 @@ defmodule PokerMind.Engine.Match.Coordinator do
   end
 
   def get_state(coordinator_id) do
-    GenServer.call(Engine.Registry.via(coordinator_id), :get_state)
+    ensure_exists(coordinator_id, fn ->
+      GenServer.call(Engine.Registry.via(coordinator_id), :get_state)
+    end)
   end
 
   def id(parent_id) do
@@ -17,20 +19,52 @@ defmodule PokerMind.Engine.Match.Coordinator do
   end
 
   def register_game_ready(coordinator_id, game_id, starting_player) do
-    GenServer.cast(Engine.Registry.via(coordinator_id), {:ready, game_id, starting_player})
+    ensure_exists(coordinator_id, game_id, fn ->
+      GenServer.cast(Engine.Registry.via(coordinator_id), {:ready, game_id, starting_player})
+    end)
   end
 
   def register_game_finished(coordinator_id, game_id, winning_player) do
-    GenServer.cast(Engine.Registry.via(coordinator_id), {:game_finished, game_id, winning_player})
+    ensure_exists(coordinator_id, game_id, fn ->
+      GenServer.cast(
+        Engine.Registry.via(coordinator_id),
+        {:game_finished, game_id, winning_player}
+      )
+    end)
   end
 
   def next_games(coordinator_id, player, amount \\ 10) do
-    GenServer.call(Engine.Registry.via(coordinator_id), {:next_games, player, amount})
+    ensure_exists(coordinator_id, fn ->
+      GenServer.call(Engine.Registry.via(coordinator_id), {:next_games, player, amount})
+    end)
   end
 
   defp all_games_ready?(state) do
     Enum.count(state.games) == state.num_games and
       Enum.all?(state.games, fn {_id, game_state} -> game_state.ready end)
+  end
+
+  defp ensure_exists(coordinator_id, game_id, fun)
+       when is_binary(coordinator_id) and is_binary(game_id) and is_function(fun) do
+    cond do
+      Registry.lookup(PokerMind.Engine.Registry, coordinator_id) == [] ->
+        {:error, :coordinator_not_found}
+
+      Registry.lookup(PokerMind.Engine.Registry, game_id) == [] ->
+        {:error, :game_not_found}
+
+      true ->
+        fun.()
+    end
+  end
+
+  defp ensure_exists(coordinator_id, fun)
+       when is_binary(coordinator_id) and is_function(fun) do
+    if Registry.lookup(PokerMind.Engine.Registry, coordinator_id) == [] do
+      {:error, :coordinator_not_found}
+    else
+      fun.()
+    end
   end
 
   # Callbacks
