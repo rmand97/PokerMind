@@ -20,6 +20,10 @@ defmodule PokerMind.Engine.Match.Coordinator do
     GenServer.cast(Engine.Registry.via(coordinator_id), {:ready, game_id, starting_player})
   end
 
+  def register_game_finished(coordinator_id, game_id, winning_player) do
+    GenServer.cast(Engine.Registry.via(coordinator_id), {:game_finished, game_id, winning_player})
+  end
+
   def next_games(coordinator_id, player, amount \\ 10) do
     GenServer.call(Engine.Registry.via(coordinator_id), {:next_games, player, amount})
   end
@@ -32,7 +36,8 @@ defmodule PokerMind.Engine.Match.Coordinator do
   # Callbacks
 
   @init_state %{
-    all_games_ready: false,
+    all_games_finished?: false,
+    all_games_ready?: false,
     games: %{},
     num_games: nil
   }
@@ -49,11 +54,30 @@ defmodule PokerMind.Engine.Match.Coordinator do
   end
 
   @impl true
-  def handle_cast({:ready, game_id, player}, %{all_games_ready: false} = state) do
+  def handle_cast({:ready, game_id, player}, %{all_games_ready?: false} = state) do
     updated_state =
       state
-      |> put_in([:games, game_id], %{ready: true, next_player: player})
-      |> then(fn s -> Map.put(s, :all_games_ready, all_games_ready?(s)) end)
+      |> put_in([:games, game_id], %{
+        ready: true,
+        next_player: player,
+        finished?: false,
+        winner: nil
+      })
+      |> then(fn s -> Map.put(s, :all_games_ready?, all_games_ready?(s)) end)
+
+    {:noreply, updated_state}
+  end
+
+  @impl true
+  def handle_cast({:game_finished, game_id, winner}, state) do
+    updated_state =
+      state
+      |> update_in([:games, game_id], fn game ->
+        %{game | finished?: true, winner: winner, next_player: nil}
+      end)
+      |> then(fn s ->
+        Map.put(s, :all_games_finished?, Enum.all?(s.games, fn {_id, game} -> game.finished? end))
+      end)
 
     {:noreply, updated_state}
   end
@@ -65,7 +89,7 @@ defmodule PokerMind.Engine.Match.Coordinator do
 
   # separator for catching all calls for when `all_games_ready` is false
   @impl true
-  def handle_call(_, _from, %{all_games_ready: false} = state) do
+  def handle_call(_, _from, %{all_games_ready?: false} = state) do
     {:reply, {:error, :not_ready}, state}
   end
 

@@ -21,7 +21,7 @@ defmodule PokerMindWeb.MatchSupport do
     end
 
     case Coordinator.get_state(coordinator_id) do
-      %{all_games_ready: true} ->
+      %{all_games_ready?: true} ->
         :ok
 
       _ ->

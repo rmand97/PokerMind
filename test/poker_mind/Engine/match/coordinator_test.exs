@@ -12,7 +12,7 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
 
       start_supervised!({Coordinator, name: coordinator_id, num_games: num_games})
 
-      assert %{all_games_ready: false, num_games: ^num_games, games: %{}} =
+      assert %{all_games_ready?: false, num_games: ^num_games, games: %{}} =
                Coordinator.get_state(coordinator_id)
     end
 
@@ -23,11 +23,11 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
 
       game1_id = UUID.uuid4()
       Coordinator.register_game_ready(coordinator_id, game1_id, "rolf")
-      refute Coordinator.get_state(coordinator_id).all_games_ready
+      refute Coordinator.get_state(coordinator_id).all_games_ready?
 
       game2_id = UUID.uuid4()
       Coordinator.register_game_ready(coordinator_id, game2_id, "rolf")
-      assert Coordinator.get_state(coordinator_id).all_games_ready
+      assert Coordinator.get_state(coordinator_id).all_games_ready?
     end
 
     test "can not call other functions than get_state/1 and register_game_ready/3 untill Coordinator is ready" do
@@ -88,5 +88,30 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
 
       assert length(games) == 5
     end
+  end
+
+  test "can mark game as finished" do
+    coordinator_id = UUID.uuid4()
+    game_id = UUID.uuid4()
+    winning_player = "rolf"
+    num_games = 1
+
+    start_supervised!({Coordinator, name: coordinator_id, num_games: num_games})
+
+    start_supervised!(
+      Supervisor.child_spec(
+        {Game, name: game_id, players: [winning_player], coordinator_id: coordinator_id},
+        id: {Game, game_id}
+      )
+    )
+
+    assert :ok = Coordinator.register_game_finished(coordinator_id, game_id, winning_player)
+    state = Coordinator.get_state(coordinator_id)
+    assert %{^game_id => game} = state.games
+
+    assert game.finished?
+    assert is_nil(game.next_player)
+    assert game.winner == winning_player
+    assert Coordinator.get_state(coordinator_id).all_games_finished?
   end
 end

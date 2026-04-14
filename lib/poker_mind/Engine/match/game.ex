@@ -33,7 +33,7 @@ defmodule PokerMind.Engine.Match.Game do
 
     game = TableState.init(TableState.new(name), players)
 
-    {:ok, %{coordinator_id: coordinator_id, id: name, game: game},
+    {:ok, %{coordinator_id: coordinator_id, id: name, game: game, finished?: false},
      {:continue, :notify_coordinator}}
   end
 
@@ -50,7 +50,12 @@ defmodule PokerMind.Engine.Match.Game do
   end
 
   @impl true
-  def handle_call({:apply_action, _action, _player}, _from, state) do
+  def handle_call({:apply_action, _action, _player}, _from, %{finished?: true} = state) do
+    {:reply, {:error, :game_finished}, state}
+  end
+
+  @impl true
+  def handle_call({:apply_action, _action, _player}, _from, %{finished?: false} = state) do
     {:reply, {:ok, state}, state}
   end
 
