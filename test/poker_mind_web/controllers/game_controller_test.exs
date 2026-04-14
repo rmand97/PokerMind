@@ -102,23 +102,24 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     assert %{"data" => suites} = json_response(conn, 200)
     assert suites[suite1_id] == players1
     assert suites[suite2_id] == players2
-    
-  test "POST /api/action with non-existent game_id returns 404", %{conn: conn} do
-    conn =
-      post(conn, "/api/action", %{
-        "player_id" => "rolf",
-        "game_id" => UUID.uuid4(),
-        "action" => "fold"
-      })
 
-    assert json_response(conn, :not_found) == %{"error" => "Game not found"}
-  end
+    test "POST /api/action with non-existent game_id returns 404", %{conn: conn} do
+      conn =
+        post(conn, "/api/action", %{
+          "player_id" => "rolf",
+          "game_id" => UUID.uuid4(),
+          "action" => "fold"
+        })
 
-  test "POST /api/action without player_id, game_id and action", %{conn: conn} do
-    conn = post(conn, "/api/action")
+      assert json_response(conn, :not_found) == %{"error" => "Game not found"}
+    end
 
-    assert json_response(conn, :bad_request) == %{
-             "error" => "player_id, game_id and action are required"
-           }
+    test "POST /api/action without player_id, game_id and action", %{conn: conn} do
+      conn = post(conn, "/api/action")
+
+      assert json_response(conn, :bad_request) == %{
+               "error" => "player_id, game_id and action are required"
+             }
+    end
   end
 end
