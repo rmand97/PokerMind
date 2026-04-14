@@ -20,7 +20,7 @@ defmodule PokerMind.Engine.Match.Suite do
 
     coordinator =
       Supervisor.child_spec(
-        {Coordinator, name: coordinator_id, num_games: num_games},
+        {Coordinator, name: coordinator_id, num_games: num_games, players: players},
         id: {Coordinator, coordinator_id}
       )
 

@@ -73,16 +73,18 @@ defmodule PokerMind.Engine.Match.Coordinator do
     all_games_finished?: false,
     all_games_ready?: false,
     games: %{},
-    num_games: nil
+    num_games: nil,
+    players: nil
   }
 
   @impl true
   def init(init_args) do
     name = Keyword.fetch!(init_args, :name)
     num_games = Keyword.fetch!(init_args, :num_games)
+    players = Keyword.fetch!(init_args, :players)
     Process.set_label(name)
 
-    state = Map.put(@init_state, :num_games, num_games)
+    state = %{@init_state | num_games: num_games, players: players}
 
     {:ok, state}
   end
@@ -147,7 +149,7 @@ defmodule PokerMind.Engine.Match.Coordinator do
       end)
       |> Kernel.then(fn {game_ids, _count} ->
         Enum.map(game_ids, fn game_id ->
-          Game.get_state(game_id)
+          Game.get_state(game_id) |> Map.get(:game)
         end)
       end)
 

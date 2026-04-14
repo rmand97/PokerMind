@@ -7,17 +7,18 @@ defmodule PokerMind.Engine.Match.GameTest do
     suite_id = UUID.uuid4()
     coordinator_id = Coordinator.id(suite_id)
     game_id = Game.id(suite_id, 1)
+    player = "stine"
 
     start_supervised!(
       Supervisor.child_spec(
-        {Coordinator, name: coordinator_id, num_games: 1},
+        {Coordinator, name: coordinator_id, num_games: 1, players: [player]},
         id: {Coordinator, coordinator_id}
       )
     )
 
     start_supervised!(
       Supervisor.child_spec(
-        {Game, name: game_id, players: ["stine"], coordinator_id: coordinator_id},
+        {Game, name: game_id, players: [player], coordinator_id: coordinator_id},
         id: game_id
       )
     )

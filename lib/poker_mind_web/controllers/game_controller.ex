@@ -3,8 +3,13 @@ defmodule PokerMindWeb.GameController do
 
   alias PokerMind.Engine.Match.Coordinator
   alias PokerMind.Engine.Match.Game
+  alias PokerMind.Engine.Match.Supervisor, as: MatchSupervisor
   alias PokerMind.Engine.TableState
   alias PokerMind.Engine.TableState.PlayerState
+
+  def suites(conn, _params) do
+    json(conn, %{data: MatchSupervisor.all_match_suites()})
+  end
 
   def next_games(conn, %{"player_id" => player_id, "suite_id" => suite_id}) do
     coordinator_id = Coordinator.id(suite_id)

@@ -74,6 +74,6 @@ defmodule PokerMind.Engine.Match.Game do
 
   @impl true
   def handle_call(:get_state, _from, state) do
-    {:reply, state.game, state}
+    {:reply, state, state}
   end
 end
