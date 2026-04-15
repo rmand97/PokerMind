@@ -11,7 +11,7 @@ defmodule PokerMind.Engine.ActionsTest do
     %{state: TableState.init(TableState.new(id), players)}
     ["stine", "rolf", "asbjørn", "simon"]
 
-    %{state: TableState.init(TableState.new("Fold_test"), players)}
+    
   end
 
   test "fold action", %{state: init_state} do
