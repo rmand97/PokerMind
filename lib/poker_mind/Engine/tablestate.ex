@@ -15,7 +15,7 @@ defmodule PokerMind.Engine.TableState do
     :deck,
     # cards on the table
     :community_cards,
-    # big blind
+    # Player who is small blind
     :small_blind_id,
     # whose turn
     :current_player_id,
@@ -59,8 +59,7 @@ defmodule PokerMind.Engine.TableState do
   defp add_player(%__MODULE__{} = state, new_player_id)
        when is_binary(new_player_id)
        when is_list(state.players) do
-    new_player =
-      PlayerState.new(new_player_id, 100)
+    new_player = PlayerState.new(new_player_id, 100)
 
     Map.put(state, :players, [new_player | state.players])
   end
