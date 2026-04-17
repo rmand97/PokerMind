@@ -247,8 +247,8 @@ defmodule PokerMind.Engine.TableState do
 
   def compare_cards(rank1, rank2)
       when is_integer(rank1) and is_integer(rank2) do
-    rank1 = something(rank1)
-    rank2 = something(rank2)
+    rank1 = normalize_rank(rank1)
+    rank2 = normalize_rank(rank2)
 
     cond do
       rank1 < rank2 -> :lt
@@ -257,11 +257,11 @@ defmodule PokerMind.Engine.TableState do
     end
   end
 
-  defp something(1) do
+  defp normalize_rank(1) do
     14
   end
 
-  defp something(rank) when is_integer(rank) and rank > 1 and rank < 14 do
+  defp normalize_rank(rank) when is_integer(rank) and rank > 1 and rank < 14 do
     rank
   end
 end
