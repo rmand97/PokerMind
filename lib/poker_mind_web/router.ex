@@ -24,7 +24,6 @@ defmodule PokerMindWeb.Router do
 
   scope "/" do
     pipe_through :browser
-    get "/", PokerMindWeb.GameController, :index
     get "/swaggerui", OpenApiSpex.Plug.SwaggerUI, path: "/api/openapi"
   end
 
