@@ -105,9 +105,8 @@ defmodule PokerMind.Engine.TableState do
   end
 
   defp new_deck(%__MODULE__{} = state) do
-    # TODO: Extract as compile-time constants
     suits = [:hearts, :diamonds, :clubs, :spades]
-    ranks = [2, 3, 4, 5, 6, 7, 8, 9, 10, :jack, :queen, :king, :ace]
+    ranks = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
     deck =
       for suit <- suits, rank <- ranks do
@@ -244,5 +243,14 @@ defmodule PokerMind.Engine.TableState do
   def update_highest_raise(%__MODULE__{} = state, amount)
       when is_integer(amount) and amount > 0 do
     Map.put(state, :highest_raise, amount)
+  end
+
+  def compare_cards(rank1, rank2)
+      when is_integer(rank1) and is_integer(rank2) do
+    cond do
+      rank1 < rank2 -> :lt
+      rank1 > rank2 -> :gt
+      true -> :eq
+    end
   end
 end
