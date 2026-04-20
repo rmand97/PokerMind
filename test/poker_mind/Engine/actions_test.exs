@@ -90,7 +90,6 @@ defmodule PokerMind.Engine.ActionsTest do
   end
 
   test "raise action", %{state: init_state} do
-    # fetch player
     starting_player_id = init_state.current_player_id
     starting_stack = Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
     # Perform raise action with valid amount
@@ -132,7 +131,6 @@ defmodule PokerMind.Engine.ActionsTest do
   end
 
   test "Call action", %{state: init_state} do
-    # get starting player
     starting_player_id = init_state.current_player_id
     starting_stack = Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
     # Perform raise action with valid amount
@@ -153,12 +151,6 @@ defmodule PokerMind.Engine.ActionsTest do
         amount: init_state.highest_raise
       })
 
-    # did call action go through?
-    assert Enum.any?(new_state.players, &(&1.id == next_player_id and &1.has_acted))
-
-    # next player has to act
-    assert next_player_id != new_state.current_player_id
-
     # check that the calling player is still :active_in_hand
     assert Enum.any?(
              new_state.players,
@@ -176,7 +168,178 @@ defmodule PokerMind.Engine.ActionsTest do
     assert next_player_remaining_chips == starting_stack - init_state.highest_raise
   end
 
-  test "test of validation helper functions", %{state: init_state} do
+  test "Test of check apply_action next player logic", %{state: init_state} do
+    starting_player_id = init_state.current_player_id
+
+    check_state = %{init_state | highest_raise: 0}
+
+    check_state =
+      Actions.apply_action(check_state, %{
+        type: :check,
+        player_id: starting_player_id
+      })
+
+    # did check action go through?
+    assert Enum.any?(check_state.players, &(&1.id == starting_player_id and &1.has_acted))
+
+    # next player has to act
+    assert starting_player_id != check_state.current_player_id
+  end
+
+  test "Test of raise/ call/ fold apply_action next player logic", %{state: init_state} do
+    starting_player_id = init_state.current_player_id
+
+    raise_state = %{init_state | highest_raise: 100}
+
+    raise_state =
+      Actions.apply_action(raise_state, %{
+        type: :raise,
+        player_id: starting_player_id,
+        amount: 2 * raise_state.highest_raise
+      })
+
+    # did raise action go through?
+    assert Enum.any?(raise_state.players, &(&1.id == starting_player_id and &1.has_acted))
+
+    # next player has to act
+    assert starting_player_id != raise_state.current_player_id
+
+    call_player_id = raise_state.current_player_id
+
+    call_state =
+      Actions.apply_action(raise_state, %{
+        type: :call,
+        player_id: call_player_id,
+        amount: 2 * init_state.highest_raise
+      })
+
+    # did call action go through?
+    assert Enum.any?(call_state.players, &(&1.id == call_player_id and &1.has_acted))
+
+    # next player has to act
+    assert call_player_id != call_state.current_player_id
+  end
+
+  test "Test of fold apply_action next player logic", %{state: init_state} do
+    starting_player_id = init_state.current_player_id
+
+    fold_state =
+      Actions.apply_action(init_state, %{
+        type: :fold,
+        player_id: starting_player_id
+      })
+
+    # did fold action go through?
+    assert Enum.any?(fold_state.players, &(&1.id == starting_player_id and &1.has_acted))
+
+    # next player has to act
+    assert starting_player_id != fold_state.current_player_id
+  end
+
+  test "Test of validate_turn helper function", %{state: init_state} do
+    starting_player_id = init_state.current_player_id
+
+    # find id off a different player to test action out of turn    other_player_id =
+    out_of_turn = Enum.find(init_state.players, &(&1.id != starting_player_id)).id
+
+    state = %{init_state | highest_raise: 0}
+
+    # action out of turn /no longer starting player's turn
+    assert Actions.apply_action(state, %{
+             type: :check,
+             player_id: out_of_turn
+           }) ==
+             {:error,
+              {:action_out_of_turn, "Awaiting action from player #{state.current_player_id}"}}
+
+    # invalid player id
+    assert Actions.apply_action(state, %{
+             type: :check,
+             player_id: "invalid_player_id"
+           }) ==
+             {:error, {:invalid_player, "Player not found at the table"}}
+
+    # player not active in hand
+    # first fold the next player to make them inactive
+    next_player_id = init_state.current_player_id
+
+    new_state =
+      Actions.apply_action(state, %{
+        type: :fold,
+        player_id: next_player_id
+      })
+
+    assert Actions.apply_action(new_state, %{
+             type: :check,
+             player_id: next_player_id
+           }) ==
+             {:error, {:player_not_active, "Player is not active in the hand"}}
+
+    # Next player raises to reset betting round
+    new_state =
+      Actions.apply_action(new_state, %{
+        type: :raise,
+        player_id: new_state.current_player_id,
+        amount: 2 * init_state.big_blind_amount
+      })
+
+    active_out_of_turn =
+      Enum.find(
+        new_state.players,
+        &(&1.state != :inactive_in_hand and &1.has_acted != true and
+            &1.id != new_state.current_player_id)
+      ).id
+
+    # starting_player then acts out of turn
+    assert Actions.apply_action(new_state, %{
+             type: :fold,
+             player_id: active_out_of_turn
+           }) ==
+             {:error,
+              {:action_out_of_turn, "Awaiting action from player #{new_state.current_player_id}"}}
+  end
+
+  test "Test of validate_amount helper function", %{state: init_state} do
+    starting_player_id = init_state.current_player_id
+    # raise amount equal to 2x highest_raise — apply_action returns the updated state, not :ok
+    assert %TableState{} =
+             Actions.apply_action(init_state, %{
+               type: :raise,
+               player_id: starting_player_id,
+               amount: 2 * init_state.highest_raise
+             })
+
+    # raise amount more than 2x highest_raise
+    assert %TableState{} =
+             Actions.apply_action(init_state, %{
+               type: :raise,
+               player_id: starting_player_id,
+               amount: 3 * init_state.highest_raise
+             })
+
+    player_remaining_chips =
+      Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
+
+    # raise with amount more than players entire stack
+    assert Actions.apply_action(init_state, %{
+             type: :raise,
+             player_id: starting_player_id,
+             amount: 3 * player_remaining_chips
+           }) ==
+             {:error, "Action requires more chips than player has remaining"}
+
+    # raise amount equal to player stack
+    assert %TableState{} =
+             Actions.apply_action(init_state, %{
+               type: :raise,
+               player_id: starting_player_id,
+               amount: player_remaining_chips
+             })
+
+    # test call
+  end
+
+  test "Test of validate_raise helper function", %{state: init_state} do
     starting_player_id = init_state.current_player_id
 
     # test error catching in validate_raise
@@ -199,43 +362,11 @@ defmodule PokerMind.Engine.ActionsTest do
              amount: 2 * init_state.highest_raise
            }) == {:error, "Current_bet = new raise amount - did we already perform this bet?"}
 
-    # reset current bet to test valid raise amounts
-    init_state = PlayerState.update_current_bet(init_state, starting_player_id, 0)
-
-    # raise amount equal to 2x highest_raise — apply_action returns the updated state, not :ok
     assert %TableState{} =
              Actions.apply_action(init_state, %{
                type: :raise,
                player_id: starting_player_id,
-               amount: 2 * init_state.highest_raise
-             })
-
-    # raise amount more than 2x current bet
-    assert %TableState{} =
-             Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               amount: 3 * init_state.highest_raise
-             })
-
-    player_remaining_chips =
-      Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
-
-    # test error catching in validate_amount
-    # raise with amount more than players entire stack
-    assert Actions.apply_action(init_state, %{
-             type: :raise,
-             player_id: starting_player_id,
-             amount: 3 * player_remaining_chips
-           }) ==
-             {:error, "Action requires more chips than player has remaining"}
-
-    # raise amount equal to player stack
-    assert %TableState{} =
-             Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               amount: player_remaining_chips
+               amount: 8 * init_state.highest_raise
              })
   end
 end

@@ -52,7 +52,7 @@ defmodule PokerMind.Engine.Actions do
   #     #TODO handle invalid action call
   # end
 
-  # move to table state
+  # move to table state? only if we need to access it from other places
   defp validate_turn(state, player_id) when is_binary(player_id) do
     player = TableState.get_player(state, player_id)
 
