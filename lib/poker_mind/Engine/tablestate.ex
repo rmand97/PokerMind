@@ -1,4 +1,5 @@
 defmodule PokerMind.Engine.TableState do
+  alias PokerMind.Engine.Poker
   alias PokerMind.Engine.TableState.PlayerState
 
   @enforce_keys [:id, :phase, :players, :pot, :deck, :community_cards]
@@ -263,5 +264,45 @@ defmodule PokerMind.Engine.TableState do
 
   defp normalize_rank(rank) when is_integer(rank) and rank > 1 and rank < 14 do
     rank
+  end
+
+  defp rank_to_string(rank) when is_integer(rank) do
+    case rank do
+      1 -> "A"
+      10 -> "T"
+      11 -> "J"
+      12 -> "Q"
+      13 -> "K"
+      n when n >= 2 and n <= 9 -> Integer.to_string(n)
+    end
+  end
+
+  defp suit_to_string(suit) when is_atom(suit) do
+    case suit do
+      :hearts -> "h"
+      :diamonds -> "d"
+      :clubs -> "c"
+      :spades -> "s"
+    end
+  end
+
+  defp translate_card(%{rank: rank, suit: suit}) do
+    "#{rank_to_string(rank)}#{suit_to_string(suit)}"
+  end
+
+  defp translate_cards(cards) do
+    Enum.map_join(cards, " ", fn card -> translate_card(card) end)
+  end
+
+  def compare_hands(hand1, hand2, community_cards) do
+    # Change format for cards to match the args for best_hand/2
+    translated_hand1 = translate_cards(hand1)
+    translated_hand2 = translate_cards(hand2)
+    translated_community_cards = translate_cards(community_cards)
+
+    {_, best_hand1} = Poker.best_hand(translated_hand1, translated_community_cards)
+    {_, best_hand2} = Poker.best_hand(translated_hand2, translated_community_cards)
+
+    Poker.hand_compare(best_hand1, best_hand2)
   end
 end

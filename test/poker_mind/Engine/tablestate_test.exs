@@ -145,4 +145,49 @@ defmodule PokerMind.Engine.TableStateTest do
     assert TableState.compare_cards(1, 2) == :gt
     assert TableState.compare_cards(1, 1) == :eq
   end
+
+  test "compare_hands/3 - hand1 is better than hand2" do
+    player1_hand = [%{rank: 4, suit: :clubs}, %{rank: 5, suit: :diamonds}]
+    player2_hand = [%{rank: 11, suit: :hearts}, %{rank: 11, suit: :spades}]
+
+    community_cards = [
+      %{rank: 3, suit: :clubs},
+      %{rank: 6, suit: :clubs},
+      %{rank: 7, suit: :diamonds},
+      %{rank: 1, suit: :diamonds},
+      %{rank: 1, suit: :clubs}
+    ]
+
+    assert TableState.compare_hands(player1_hand, player2_hand, community_cards) == :gt
+  end
+
+  test "compare_hands/3 - hand1 and hand2 is equally good" do
+    player1_hand = [%{rank: 8, suit: :hearts}, %{rank: 9, suit: :hearts}]
+    player2_hand = [%{rank: 3, suit: :diamonds}, %{rank: 4, suit: :diamonds}]
+
+    community_cards = [
+      %{rank: 2, suit: :clubs},
+      %{rank: 10, suit: :clubs},
+      %{rank: 11, suit: :clubs},
+      %{rank: 12, suit: :clubs},
+      %{rank: 13, suit: :clubs}
+    ]
+
+    assert TableState.compare_hands(player1_hand, player2_hand, community_cards) == :eq
+  end
+
+  test "compare_hands/3 - hand1 is worse than hand2" do
+    player1_hand = [%{rank: 11, suit: :hearts}, %{rank: 11, suit: :spades}]
+    player2_hand = [%{rank: 4, suit: :clubs}, %{rank: 5, suit: :diamonds}]
+
+    community_cards = [
+      %{rank: 3, suit: :clubs},
+      %{rank: 6, suit: :clubs},
+      %{rank: 7, suit: :diamonds},
+      %{rank: 1, suit: :diamonds},
+      %{rank: 1, suit: :clubs}
+    ]
+
+    assert TableState.compare_hands(player1_hand, player2_hand, community_cards) == :lt
+  end
 end

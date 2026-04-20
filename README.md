@@ -10,3 +10,7 @@ To start your Phoenix server:
 - **[Boundary](https://hexdocs.pm/boundary/0.10.4/Boundary.html)** is used to keep a strict boundary between our backend and frontend.
 
 - **[Test Watch](https://hexdocs.pm/mix_test_watch/readme.html)** is used to automatically run your Elixir project's tests each time you save a file.
+
+## Notes
+
+We have copied the code from https://github.com/wojtekmach/poker_elixir, as the library was not up to date with our version of Elixir

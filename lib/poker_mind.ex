@@ -6,7 +6,8 @@ defmodule PokerMind do
       Engine.Match.Coordinator,
       Engine.Match.Game,
       Engine.TableState,
-      Engine.TableState.PlayerState
+      Engine.TableState.PlayerState,
+      Engine.Poker
     ]
 
   @moduledoc """
