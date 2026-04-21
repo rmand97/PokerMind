@@ -316,8 +316,7 @@ defmodule PokerMind.Engine.TableState do
       if leftover_chips > 0 do
         Enum.reduce(0..(leftover_chips - 1), state, fn i, current_state ->
           winner_id = Enum.at(winners, i)
-          player = get_player(current_state, winner_id)
-          set_player_value(current_state, winner_id, :remaining_chips, player.remaining_chips + 1)
+          PlayerState.add_chips(current_state, winner_id, 1)
         end)
       else
         state
@@ -326,14 +325,7 @@ defmodule PokerMind.Engine.TableState do
     # Distribute winnings to all winners
     final_state =
       Enum.reduce(winners, new_state, fn winner_id, current_state ->
-        player = get_player(current_state, winner_id)
-
-        set_player_value(
-          current_state,
-          winner_id,
-          :remaining_chips,
-          player.remaining_chips + winning_chips
-        )
+        PlayerState.add_chips(current_state, winner_id, winning_chips)
       end)
 
     Map.put(final_state, :pot, 0)
