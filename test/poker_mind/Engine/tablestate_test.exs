@@ -195,4 +195,67 @@ defmodule PokerMind.Engine.TableStateTest do
 
     assert TableState.compare_hands(player1_hand, player2_hand, community_cards) == :lt
   end
+
+  test "split_pot/2 - one winner, no leftover chips",
+       %{
+         state: state
+       } do
+    new_state =
+      state
+      |> TableState.set_player_value("simon", :remaining_chips, 0)
+      |> TableState.set_player_value("asbjørn", :remaining_chips, 0)
+      |> TableState.set_player_value("rolf", :remaining_chips, 0)
+      |> Map.put(:pot, 100)
+
+    winners = ["simon"]
+
+    final_state = TableState.split_pot(new_state, winners)
+
+    assert final_state.pot == 0
+    assert TableState.get_player(final_state, "simon").remaining_chips == 100
+    assert TableState.get_player(final_state, "asbjørn").remaining_chips == 0
+    assert TableState.get_player(final_state, "rolf").remaining_chips == 0
+  end
+
+  test "split_pot/2 - two winners, one leftover chip for the first winning player",
+       %{
+         state: state
+       } do
+    new_state =
+      state
+      |> TableState.set_player_value("simon", :remaining_chips, 0)
+      |> TableState.set_player_value("asbjørn", :remaining_chips, 0)
+      |> TableState.set_player_value("rolf", :remaining_chips, 0)
+      |> Map.put(:pot, 101)
+
+    winners = ["asbjørn", "rolf"]
+
+    final_state = TableState.split_pot(new_state, winners)
+
+    assert final_state.pot == 0
+    assert TableState.get_player(final_state, "simon").remaining_chips == 0
+    assert TableState.get_player(final_state, "asbjørn").remaining_chips == 51
+    assert TableState.get_player(final_state, "rolf").remaining_chips == 50
+  end
+
+  test "split_pot/2 - three winners, two leftover chip, one for the first winning player and one for the second winning player",
+       %{
+         state: state
+       } do
+    new_state =
+      state
+      |> TableState.set_player_value("simon", :remaining_chips, 0)
+      |> TableState.set_player_value("asbjørn", :remaining_chips, 0)
+      |> TableState.set_player_value("rolf", :remaining_chips, 0)
+      |> Map.put(:pot, 101)
+
+    winners = ["simon", "asbjørn", "rolf"]
+
+    final_state = TableState.split_pot(new_state, winners)
+
+    assert final_state.pot == 0
+    assert TableState.get_player(final_state, "simon").remaining_chips == 34
+    assert TableState.get_player(final_state, "asbjørn").remaining_chips == 34
+    assert TableState.get_player(final_state, "rolf").remaining_chips == 33
+  end
 end
