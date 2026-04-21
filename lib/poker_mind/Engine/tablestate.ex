@@ -27,17 +27,13 @@ defmodule PokerMind.Engine.TableState do
 
   def new(id) when is_binary(id) do
     # when we initialize a new table, highest_raise and big_blind_amount is the same
-    big_blind_amount = 100
-
     %__MODULE__{
       id: id,
       phase: :pre_flop,
       players: [],
       pot: 0,
       deck: [],
-      community_cards: [],
-      highest_raise: big_blind_amount,
-      big_blind_amount: big_blind_amount
+      community_cards: []
     }
   end
 
@@ -60,7 +56,7 @@ defmodule PokerMind.Engine.TableState do
   defp add_player(%__MODULE__{} = state, new_player_id)
        when is_binary(new_player_id)
        when is_list(state.players) do
-    new_player = PlayerState.new(new_player_id, 100)
+    new_player = PlayerState.new(new_player_id, 1000)
 
     Map.put(state, :players, [new_player | state.players])
   end
@@ -78,11 +74,15 @@ defmodule PokerMind.Engine.TableState do
     %__MODULE__{state | players: updated_players}
   end
 
+  # TODO: update with setting blinds and deducting chips from players
   defp set_blinds(%__MODULE__{} = state) do
     small_blind = Enum.random(state.players)
+    big_blind = 100
 
     state
     |> Map.put(:small_blind_id, small_blind.id)
+    |> Map.put(:highest_raise, big_blind)
+    |> Map.put(:big_blind_amount, big_blind)
     |> advance_player(:current_player_id, small_blind.id)
     |> advance_player()
   end

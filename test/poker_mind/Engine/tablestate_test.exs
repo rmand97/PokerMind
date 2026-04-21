@@ -116,19 +116,24 @@ defmodule PokerMind.Engine.TableStateTest do
        %{
          state: state
        } do
-    player1 = "stine"
-    player2 = "rolf"
+    player1 = %{TableState.get_player(state, "stine") | remaining_chips: 100, current_bet: 0}
+    player2 = %{TableState.get_player(state, "rolf") | remaining_chips: 100, current_bet: 0}
+
+    # update state with new players (with 100 chips and 0 current bet) to test add_to_pot
+    state_new_players =
+      state
+      |> Map.put(:players, [player1, player2 | Enum.drop(state.players, 4)])
 
     updated_state =
-      state
-      # Bet 20 chips for each player
-      |> TableState.add_to_pot(player2, 20)
-      |> TableState.add_to_pot(player1, 20)
-      # Bet 50 ships for rolf (so 30 more)
-      |> TableState.add_to_pot(player2, 50)
+      state_new_players
+      # add_to_pot with 20 chips for each player
+      |> TableState.add_to_pot(player2.id, 20)
+      |> TableState.add_to_pot(player1.id, 20)
+      # add_to_pot with for rolf (so 30 more)
+      |> TableState.add_to_pot(player2.id, 50)
 
-    updated_player1 = TableState.get_player(updated_state, player1)
-    updated_player2 = TableState.get_player(updated_state, player2)
+    updated_player1 = TableState.get_player(updated_state, player1.id)
+    updated_player2 = TableState.get_player(updated_state, player2.id)
 
     # each player starts with 100 chips
     assert updated_player1.remaining_chips == 80

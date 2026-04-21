@@ -48,7 +48,7 @@ defmodule PokerMind.Engine.TableState.PlayerState do
   end
 
   def update_current_bet(%TableState{} = state, player_id, amount)
-      when is_integer(amount) and amount > 0 do
+      when is_integer(amount) do
     update_in(
       state,
       [Access.key(:players), Access.find(&(&1.id == player_id)), Access.key(:current_bet)],
