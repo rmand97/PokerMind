@@ -149,16 +149,8 @@ defmodule PokerMind.Engine.TableState do
     end
   end
 
-  defp deal_cards_flop(%__MODULE__{} = state) do
-    {drawn, remaining} = Enum.split(state.deck, 3)
-
-    state
-    |> Map.put(:community_cards, drawn)
-    |> Map.put(:deck, remaining)
-  end
-
-  defp deal_cards_turn_and_river(%__MODULE__{} = state) do
-    {drawn, remaining} = Enum.split(state.deck, 1)
+  defp deal_community_cards(%__MODULE__{} = state, num) do
+    {drawn, remaining} = Enum.split(state.deck, num)
 
     state
     |> Map.update(:community_cards, drawn, fn existing -> existing ++ drawn end)
@@ -170,9 +162,9 @@ defmodule PokerMind.Engine.TableState do
       new_state = Map.put(state, :phase, next_phase)
 
       case next_phase do
-        :flop -> deal_cards_flop(new_state)
-        :turn -> deal_cards_turn_and_river(new_state)
-        :river -> deal_cards_turn_and_river(new_state)
+        :flop -> deal_community_cards(new_state, 3)
+        :turn -> deal_community_cards(new_state, 1)
+        :river -> deal_community_cards(new_state, 1)
       end
     else
       {:error, {:invalid_transition, state.phase, next_phase}}
