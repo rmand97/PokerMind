@@ -51,10 +51,12 @@ defmodule PokerMind.Engine.Actions do
   def apply_action(%TableState{} = state, %{type: :all_in, player_id: player_id})
       when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id) do
-      PlayerState.set_player_value(player_id, :state, :all_in)
+      %{remaining_chips: chips, current_bet: bet} = TableState.get_player(state, player_id)
+      all_in_amount = chips + bet
 
       state
-      |> TableState.add_to_pot(player_id, TableState.get_player(state, player_id).remaining_chips)
+      |> TableState.set_player_value(player_id, :state, :all_in)
+      |> TableState.add_to_pot(player_id, all_in_amount)
       |> advance_player_turn(:all_in)
     end
   end
