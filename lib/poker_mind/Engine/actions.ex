@@ -48,11 +48,20 @@ defmodule PokerMind.Engine.Actions do
     end
   end
 
+  def apply_action(%TableState{} = state, %{type: :all_in, player_id: player_id})
+      when is_binary(player_id) do
+    with :ok <- validate_turn(state, player_id) do
+      PlayerState.set_player_value(player_id, :state, :all_in)
+      state
+      |> TableState.add_to_pot(player_id, TableState.get_player(state, player_id).remaining_chips)
+      |> advance_player_turn(:all_in)
+    end
+  end
+
   # def apply_action(%TableState{} = state, amount, player_id) do
   #     #TODO handle invalid action call
   # end
 
-  # move to table state? only if we need to access it from other places
   defp validate_turn(state, player_id) when is_binary(player_id) do
     player = TableState.get_player(state, player_id)
 
@@ -77,10 +86,10 @@ defmodule PokerMind.Engine.Actions do
   defp validate_amount(state, player_id, amount) when is_integer(amount) do
     player = TableState.get_player(state, player_id)
 
-    if amount <= player.remaining_chips and amount > 0 do
-      :ok
-    else
-      {:error, "Action requires more chips than player has remaining"}
+    cond do
+      amount < player.remaining_chips -> :ok
+      amount > 0 -> :ok
+      true -> {:error, "Action requires more chips than player has remaining - if you want to go all in use the all_in action type"}
     end
   end
 
