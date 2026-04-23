@@ -326,15 +326,17 @@ defmodule PokerMind.Engine.ActionsTest do
              player_id: starting_player_id,
              amount: 3 * player_remaining_chips
            }) ==
-             {:error, "Action requires more chips than player has remaining"}
+             {:error,
+              "Action requires more chips than player has remaining - if you want to go all in use the all_in action type"}
 
     # raise amount equal to player stack
-    assert %TableState{} =
-             Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               amount: player_remaining_chips
-             })
+    assert Actions.apply_action(init_state, %{
+             type: :raise,
+             player_id: starting_player_id,
+             amount: player_remaining_chips
+           }) ==
+             {:error,
+              "Action requires all remaining chips - if you want to go all in use the all_in action type"}
 
     # test call
   end
@@ -368,5 +370,75 @@ defmodule PokerMind.Engine.ActionsTest do
                player_id: starting_player_id,
                amount: 8 * init_state.highest_raise
              })
+  end
+
+  test "all_in action", %{state: init_state} do
+    starting_player_id = init_state.current_player_id
+    starting_stack = Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
+
+    all_in_state =
+      Actions.apply_action(init_state, %{type: :all_in, player_id: starting_player_id})
+
+    all_in_player = Enum.find(all_in_state.players, &(&1.id == starting_player_id))
+
+    # player is now :all_in and has acted
+    assert all_in_player.state == :all_in
+    assert all_in_player.has_acted
+
+    # entire stack was moved to the pot
+    assert all_in_player.remaining_chips == 0
+    assert all_in_player.current_bet == starting_stack
+    assert all_in_state.pot == init_state.pot + starting_stack
+
+    # other players are unaffected
+    original_others = Enum.reject(init_state.players, &(&1.id == starting_player_id))
+    unchanged_players = Enum.reject(all_in_state.players, &(&1.id == starting_player_id))
+    assert unchanged_players == original_others
+  end
+
+  test "all_in only adds the delta when player already has chips committed", %{state: init_state} do
+    starting_player_id = init_state.current_player_id
+    starting_stack = Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
+    already_committed = 50
+
+    # Simulate chips already committed (e.g. posted blind) without mutating the pot
+    state_with_commit =
+      init_state
+      |> PlayerState.deduct_chips(starting_player_id, already_committed)
+      |> PlayerState.update_current_bet(starting_player_id, already_committed)
+
+    # Move player all in with the remaining stack (1000 - 50 = 950)
+    new_state =
+      Actions.apply_action(state_with_commit, %{type: :all_in, player_id: starting_player_id})
+
+    all_in_player = Enum.find(new_state.players, &(&1.id == starting_player_id))
+
+    # pot grows only by the uncommitted portion of the stack
+    assert new_state.pot == init_state.pot + (starting_stack - already_committed)
+    assert all_in_player.remaining_chips == 0
+    assert all_in_player.current_bet == starting_stack
+    assert all_in_player.state == :all_in
+  end
+
+  test "all_in validation errors", %{state: init_state} do
+    starting_player_id = init_state.current_player_id
+
+    # action out of turn
+    out_of_turn_id = Enum.find(init_state.players, &(&1.id != starting_player_id)).id
+
+    assert Actions.apply_action(init_state, %{type: :all_in, player_id: out_of_turn_id}) ==
+             {:error,
+              {:action_out_of_turn, "Awaiting action from player #{init_state.current_player_id}"}}
+
+    # invalid player id
+    assert Actions.apply_action(init_state, %{type: :all_in, player_id: "invalid_player_id"}) ==
+             {:error, {:invalid_player, "Player not found at the table"}}
+
+    # player not active in hand — fold first, then try to go all in as the folded player
+    folded_state =
+      Actions.apply_action(init_state, %{type: :fold, player_id: starting_player_id})
+
+    assert Actions.apply_action(folded_state, %{type: :all_in, player_id: starting_player_id}) ==
+             {:error, {:player_not_active, "Player is not active in the hand"}}
   end
 end
