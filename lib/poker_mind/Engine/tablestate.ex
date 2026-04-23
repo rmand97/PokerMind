@@ -147,7 +147,7 @@ defmodule PokerMind.Engine.TableState do
     :flop => [:turn, :showdown],
     :turn => [:river, :showdown],
     :river => [:showdown],
-    :showdown => [:finished]
+    :showdown => [:hand_finished]
   }
 
   def next_phase(%__MODULE__{} = state) do
@@ -161,7 +161,7 @@ defmodule PokerMind.Engine.TableState do
         :flop -> :turn
         :turn -> :river
         :river -> :showdown
-        :showdown -> :finished
+        :showdown -> :hand_finished
       end
     end
   end
