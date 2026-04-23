@@ -1,6 +1,7 @@
 defmodule PokerMind.Engine.TableStateTest do
   use ExUnit.Case, async: true
   alias PokerMind.Engine.TableState
+  alias PokerMind.Engine.TableState.PlayerState
 
   setup do
     players =
@@ -196,67 +197,125 @@ defmodule PokerMind.Engine.TableStateTest do
     assert TableState.compare_hands(player1_hand, player2_hand, community_cards) == :lt
   end
 
-  test "split_pot/2 - one winner, no leftover chips",
-       %{
-         state: state
-       } do
-    new_state =
-      state
-      |> TableState.set_player_value("simon", :remaining_chips, 0)
-      |> TableState.set_player_value("asbjørn", :remaining_chips, 0)
-      |> TableState.set_player_value("rolf", :remaining_chips, 0)
-      |> Map.put(:pot, 100)
-
-    winners = ["simon"]
-
-    final_state = TableState.split_pot(new_state, winners)
-
-    assert final_state.pot == 0
-    assert TableState.get_player(final_state, "simon").remaining_chips == 100
-    assert TableState.get_player(final_state, "asbjørn").remaining_chips == 0
-    assert TableState.get_player(final_state, "rolf").remaining_chips == 0
+  # Board A♠ A♥ A♦ A♣ K♠ makes the five community cards the best possible 5-card
+  # hand for every player (four aces + K kicker), forcing a tie regardless of hole
+  # cards. Used below to exercise pay_pot's odd-chip splitting via distribute_pots.
+  defp tied_board do
+    [
+      %{rank: 1, suit: :spades},
+      %{rank: 1, suit: :hearts},
+      %{rank: 1, suit: :diamonds},
+      %{rank: 1, suit: :clubs},
+      %{rank: 13, suit: :spades}
+    ]
   end
 
-  test "split_pot/2 - two winners, one leftover chip for the first winning player",
-       %{
-         state: state
-       } do
-    new_state =
-      state
-      |> TableState.set_player_value("simon", :remaining_chips, 0)
-      |> TableState.set_player_value("asbjørn", :remaining_chips, 0)
-      |> TableState.set_player_value("rolf", :remaining_chips, 0)
-      |> Map.put(:pot, 101)
-
-    winners = ["asbjørn", "rolf"]
-
-    final_state = TableState.split_pot(new_state, winners)
-
-    assert final_state.pot == 0
-    assert TableState.get_player(final_state, "simon").remaining_chips == 0
-    assert TableState.get_player(final_state, "asbjørn").remaining_chips == 51
-    assert TableState.get_player(final_state, "rolf").remaining_chips == 50
+  defp showdown_state(players, community) do
+    %TableState{
+      id: "test",
+      phase: :showdown,
+      players: players,
+      pot: Enum.sum(Enum.map(players, & &1.total_contributed)),
+      deck: [],
+      community_cards: community
+    }
   end
 
-  test "split_pot/2 - three winners, two leftover chip, one for the first winning player and one for the second winning player",
-       %{
-         state: state
-       } do
-    new_state =
-      state
-      |> TableState.set_player_value("simon", :remaining_chips, 0)
-      |> TableState.set_player_value("asbjørn", :remaining_chips, 0)
-      |> TableState.set_player_value("rolf", :remaining_chips, 0)
-      |> Map.put(:pot, 101)
+  defp showdown_player(id, state, total_contributed, hole) do
+    %PlayerState{
+      id: id,
+      remaining_chips: 0,
+      state: state,
+      current_bet: total_contributed,
+      total_contributed: total_contributed,
+      has_acted: true,
+      current_hand: hole
+    }
+  end
 
-    winners = ["simon", "asbjørn", "rolf"]
+  test "distribute_pots/1 - single winner takes the whole pot" do
+    community = [
+      %{rank: 2, suit: :diamonds},
+      %{rank: 7, suit: :clubs},
+      %{rank: 5, suit: :hearts},
+      %{rank: 9, suit: :clubs},
+      %{rank: 12, suit: :diamonds}
+    ]
 
-    final_state = TableState.split_pot(new_state, winners)
+    players = [
+      showdown_player("A", :active_in_hand, 50, [
+        %{rank: 1, suit: :spades},
+        %{rank: 1, suit: :clubs}
+      ]),
+      showdown_player("B", :active_in_hand, 50, [
+        %{rank: 4, suit: :spades},
+        %{rank: 8, suit: :clubs}
+      ])
+    ]
 
-    assert final_state.pot == 0
-    assert TableState.get_player(final_state, "simon").remaining_chips == 34
-    assert TableState.get_player(final_state, "asbjørn").remaining_chips == 34
-    assert TableState.get_player(final_state, "rolf").remaining_chips == 33
+    final = TableState.distribute_pots(showdown_state(players, community))
+
+    assert final.pot == 0
+    assert TableState.get_player(final, "A").remaining_chips == 100
+    assert TableState.get_player(final, "B").remaining_chips == 0
+  end
+
+  test "distribute_pots/1 - two tied winners with one leftover chip goes to the first winner" do
+    # Still-in A, B each contribute 50. Folded C contributes 1 extra chip, so the
+    # layer-50 pot is 101 split between two tied winners: 50 + 1 leftover → A=51, B=50.
+    players = [
+      showdown_player("A", :active_in_hand, 50, [
+        %{rank: 2, suit: :spades},
+        %{rank: 3, suit: :clubs}
+      ]),
+      showdown_player("B", :active_in_hand, 50, [
+        %{rank: 4, suit: :spades},
+        %{rank: 5, suit: :clubs}
+      ]),
+      showdown_player("C", :inactive_in_hand, 1, [
+        %{rank: 6, suit: :spades},
+        %{rank: 7, suit: :clubs}
+      ])
+    ]
+
+    final = TableState.distribute_pots(showdown_state(players, tied_board()))
+
+    assert final.pot == 0
+    assert TableState.get_player(final, "A").remaining_chips == 51
+    assert TableState.get_player(final, "B").remaining_chips == 50
+    assert TableState.get_player(final, "C").remaining_chips == 0
+  end
+
+  test "distribute_pots/1 - three tied winners with two leftover chips go to the first two winners" do
+    # Still-in A, B, C each contribute 33. Folded D contributes 2 extra chips, so
+    # the layer-33 pot is 101 split between three tied winners: 33 + 2 leftover →
+    # A=34, B=34, C=33.
+    players = [
+      showdown_player("A", :active_in_hand, 33, [
+        %{rank: 2, suit: :spades},
+        %{rank: 3, suit: :clubs}
+      ]),
+      showdown_player("B", :active_in_hand, 33, [
+        %{rank: 4, suit: :spades},
+        %{rank: 5, suit: :clubs}
+      ]),
+      showdown_player("C", :active_in_hand, 33, [
+        %{rank: 6, suit: :spades},
+        %{rank: 7, suit: :clubs}
+      ]),
+      showdown_player("D", :inactive_in_hand, 2, [
+        %{rank: 8, suit: :spades},
+        %{rank: 9, suit: :clubs}
+      ])
+    ]
+
+    final = TableState.distribute_pots(showdown_state(players, tied_board()))
+
+    assert final.pot == 0
+    assert TableState.get_player(final, "A").remaining_chips == 34
+    assert TableState.get_player(final, "B").remaining_chips == 34
+    assert TableState.get_player(final, "C").remaining_chips == 33
+    assert TableState.get_player(final, "D").remaining_chips == 0
   end
 
   test "advance_phase/2 - deal community_cards, three for flop, one for turn and one for river",
@@ -433,5 +492,158 @@ defmodule PokerMind.Engine.TableStateTest do
     # stine is the winner of the table
     assert final_state.winner == "stine"
     assert final_state.phase == :game_finished
+
+  end
+
+  test "reset_highest_raise/1 - resets highest_raise to big_blind_amount", %{state: state} do
+    state = Map.put(state, :highest_raise, 500)
+    assert TableState.reset_highest_raise(state).highest_raise == state.big_blind_amount
+  end
+
+  test "PlayerState.reset_current_bet/1 - zeros current_bet for all players", %{state: state} do
+    state =
+      state
+      |> PlayerState.update_current_bet("stine", 100)
+      |> PlayerState.update_current_bet("rolf", 200)
+
+    reset = PlayerState.reset_current_bet(state)
+    assert Enum.all?(reset.players, &(&1.current_bet == 0))
+  end
+
+  defp pots_state(players_data) do
+    players =
+      Enum.map(players_data, fn {id, state, total_contributed} ->
+        %PlayerState{
+          id: id,
+          remaining_chips: 0,
+          state: state,
+          current_bet: 0,
+          total_contributed: total_contributed,
+          has_acted: false
+        }
+      end)
+
+    %TableState{
+      id: "test",
+      phase: :showdown,
+      players: players,
+      pot: Enum.sum(Enum.map(players, & &1.total_contributed)),
+      deck: [],
+      community_cards: []
+    }
+  end
+
+  test "build_pots/1 - two all-ins at different stacks, third covers" do
+    state =
+      pots_state([
+        {"A", :all_in, 50},
+        {"B", :all_in, 150},
+        {"C", :active_in_hand, 150}
+      ])
+
+    assert %{
+             pots: [
+               %{amount: 150, eligible_ids: ["A", "B", "C"]},
+               %{amount: 200, eligible_ids: ["B", "C"]}
+             ],
+             refunds: []
+           } = TableState.build_pots(state)
+  end
+
+  test "build_pots/1 - uncontested top layer refunded to sole still-in contributor" do
+    state =
+      pots_state([
+        {"A", :all_in, 100},
+        {"B", :active_in_hand, 300},
+        {"C", :inactive_in_hand, 100}
+      ])
+
+    result = TableState.build_pots(state)
+    assert [%{amount: 300, eligible_ids: ["A", "B"]}] = result.pots
+    assert [{"B", 200}] = result.refunds
+  end
+
+  test "build_pots/1 - folded player contributes but is never eligible" do
+    state =
+      pots_state([
+        {"A", :active_in_hand, 200},
+        {"B", :active_in_hand, 200},
+        {"C", :inactive_in_hand, 200}
+      ])
+
+    assert %{
+             pots: [%{amount: 600, eligible_ids: ["A", "B"]}],
+             refunds: []
+           } = TableState.build_pots(state)
+  end
+
+  test "build_pots/1 - single still-in player at top layer refunds the excess" do
+    state =
+      pots_state([
+        {"A", :all_in, 100},
+        {"B", :active_in_hand, 500}
+      ])
+
+    result = TableState.build_pots(state)
+    assert [%{amount: 200, eligible_ids: ["A", "B"]}] = result.pots
+    assert [{"B", 400}] = result.refunds
+  end
+
+  test "distribute_pots/1 - all-in player wins main pot, bigger stack wins side pot" do
+    # A all-in 100 with pair of Kings, B all-in 300 with pair of Queens,
+    # C all-in 300 with high card. A wins main pot, B wins side pot.
+    players = [
+      %PlayerState{
+        id: "A",
+        remaining_chips: 0,
+        state: :all_in,
+        current_bet: 100,
+        total_contributed: 100,
+        has_acted: true,
+        current_hand: [%{rank: 13, suit: :spades}, %{rank: 13, suit: :clubs}]
+      },
+      %PlayerState{
+        id: "B",
+        remaining_chips: 0,
+        state: :all_in,
+        current_bet: 300,
+        total_contributed: 300,
+        has_acted: true,
+        current_hand: [%{rank: 12, suit: :spades}, %{rank: 12, suit: :clubs}]
+      },
+      %PlayerState{
+        id: "C",
+        remaining_chips: 0,
+        state: :all_in,
+        current_bet: 300,
+        total_contributed: 300,
+        has_acted: true,
+        current_hand: [%{rank: 3, suit: :spades}, %{rank: 4, suit: :clubs}]
+      }
+    ]
+
+    community = [
+      %{rank: 2, suit: :diamonds},
+      %{rank: 7, suit: :clubs},
+      %{rank: 5, suit: :diamonds},
+      %{rank: 9, suit: :hearts},
+      %{rank: 11, suit: :spades}
+    ]
+
+    state = %TableState{
+      id: "test",
+      phase: :showdown,
+      players: players,
+      pot: 700,
+      deck: [],
+      community_cards: community
+    }
+
+    final = TableState.distribute_pots(state)
+
+    assert TableState.get_player(final, "A").remaining_chips == 300
+    assert TableState.get_player(final, "B").remaining_chips == 400
+    assert TableState.get_player(final, "C").remaining_chips == 0
+    assert final.pot == 0
   end
 end

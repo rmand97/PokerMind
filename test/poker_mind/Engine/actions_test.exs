@@ -460,5 +460,110 @@ defmodule PokerMind.Engine.ActionsTest do
              player_id: starting_player_id
            }) ==
              {:error, {:invalid_action, "Action is not supported"}}
+  test "all_in - short all-in (< highest_raise) does not re-open betting",
+       %{state: init_state} do
+    p1 = init_state.current_player_id
+
+    after_raise =
+      Actions.apply_action(init_state, %{type: :raise, player_id: p1, amount: 800})
+
+    p2 = after_raise.current_player_id
+
+    after_call =
+      Actions.apply_action(after_raise, %{type: :call, player_id: p2, amount: 800})
+
+    assert Enum.find(after_call.players, &(&1.id == p1)).has_acted
+    assert Enum.find(after_call.players, &(&1.id == p2)).has_acted
+
+    p3 = after_call.current_player_id
+    short_state = TableState.set_player_value(after_call, p3, :remaining_chips, 300)
+
+    final = Actions.apply_action(short_state, %{type: :all_in, player_id: p3})
+
+    # highest_raise unchanged, earlier actors' has_acted preserved
+    assert final.highest_raise == 800
+    assert Enum.find(final.players, &(&1.id == p1)).has_acted
+    assert Enum.find(final.players, &(&1.id == p2)).has_acted
+    assert Enum.find(final.players, &(&1.id == p3)).state == :all_in
+  end
+
+  test "all_in - matching all-in (== highest_raise) does not re-open betting",
+       %{state: init_state} do
+    p1 = init_state.current_player_id
+
+    after_raise =
+      Actions.apply_action(init_state, %{type: :raise, player_id: p1, amount: 500})
+
+    p2 = after_raise.current_player_id
+
+    after_call =
+      Actions.apply_action(after_raise, %{type: :call, player_id: p2, amount: 500})
+
+    p3 = after_call.current_player_id
+    matching_state = TableState.set_player_value(after_call, p3, :remaining_chips, 500)
+
+    final = Actions.apply_action(matching_state, %{type: :all_in, player_id: p3})
+
+    assert final.highest_raise == 500
+    assert Enum.find(final.players, &(&1.id == p1)).has_acted
+    assert Enum.find(final.players, &(&1.id == p2)).has_acted
+    assert Enum.find(final.players, &(&1.id == p3)).state == :all_in
+  end
+
+  test "all_in - over-the-top all-in (> highest_raise) updates highest_raise and re-opens betting",
+       %{state: init_state} do
+    p1 = init_state.current_player_id
+
+    after_raise =
+      Actions.apply_action(init_state, %{type: :raise, player_id: p1, amount: 500})
+
+    p2 = after_raise.current_player_id
+
+    after_call =
+      Actions.apply_action(after_raise, %{type: :call, player_id: p2, amount: 500})
+
+    assert Enum.find(after_call.players, &(&1.id == p1)).has_acted
+    assert Enum.find(after_call.players, &(&1.id == p2)).has_acted
+
+    p3 = after_call.current_player_id
+    final = Actions.apply_action(after_call, %{type: :all_in, player_id: p3})
+
+    # full stack (1000) goes in over the top of highest_raise 500
+    assert final.highest_raise == 1000
+    refute Enum.find(final.players, &(&1.id == p1)).has_acted
+    refute Enum.find(final.players, &(&1.id == p2)).has_acted
+    assert Enum.find(final.players, &(&1.id == p3)).state == :all_in
+  end
+
+  test "round transition resets current_bet, has_acted, highest_raise and preserves total_contributed",
+       %{state: init_state} do
+    p1 = init_state.current_player_id
+
+    raised =
+      Actions.apply_action(init_state, %{
+        type: :raise,
+        player_id: p1,
+        amount: 2 * init_state.highest_raise
+      })
+
+    # Three remaining players call to close the round
+    final =
+      Enum.reduce(1..3, raised, fn _, s ->
+        Actions.apply_action(s, %{
+          type: :call,
+          player_id: s.current_player_id,
+          amount: 2 * init_state.highest_raise
+        })
+      end)
+
+    assert final.phase == :flop
+    assert final.highest_raise == init_state.big_blind_amount
+    assert Enum.all?(final.players, &(&1.current_bet == 0))
+    assert Enum.all?(final.players, &(not &1.has_acted))
+
+    assert Enum.all?(
+             final.players,
+             &(&1.total_contributed == 2 * init_state.big_blind_amount)
+           )
   end
 end
