@@ -129,8 +129,12 @@ defmodule PokerMind.Engine.TableState do
   def deal_cards(%__MODULE__{} = state) do
     {updated_players, remaining_deck} =
       Enum.map_reduce(state.players, state.deck, fn %PlayerState{} = player, acc ->
-        {drawn, remaining} = Enum.split(acc, 2)
-        {%{player | current_hand: drawn}, remaining}
+        if player.state == :active_in_hand do
+          {drawn, remaining} = Enum.split(acc, 2)
+          {%{player | current_hand: drawn}, remaining}
+        else
+          {player, acc}
+        end
       end)
 
     state
