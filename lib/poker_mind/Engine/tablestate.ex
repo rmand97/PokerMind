@@ -143,7 +143,7 @@ defmodule PokerMind.Engine.TableState do
   def next_phase(%__MODULE__{} = state) do
     active_count = Enum.count(state.players, fn player -> player.state == :active_in_hand end)
 
-    if active_count <= 1 do
+    if active_count <= 1 and state.phase != :showdown do
       :showdown
     else
       case state.phase do
@@ -152,7 +152,6 @@ defmodule PokerMind.Engine.TableState do
         :turn -> :river
         :river -> :showdown
         :showdown -> :finished
-        :finished -> :pre_flop
       end
     end
   end
