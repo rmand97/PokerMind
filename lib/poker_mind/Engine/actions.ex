@@ -119,8 +119,7 @@ defmodule PokerMind.Engine.Actions do
       :ok
     else
       {:error,
-       {:cannot_fold_last_player,
-        "Cannot fold when no other players are still in the hand"}}
+       {:cannot_fold_last_player, "Cannot fold when no other players are still in the hand"}}
     end
   end
 
@@ -129,8 +128,7 @@ defmodule PokerMind.Engine.Actions do
       :ok
     else
       {:error,
-       {:invalid_call_amount,
-        "Call amount #{amount} must match highest raise #{highest_raise}"}}
+       {:invalid_call_amount, "Call amount #{amount} must match highest raise #{highest_raise}"}}
     end
   end
 
