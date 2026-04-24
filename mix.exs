@@ -60,6 +60,7 @@ defmodule PokerMind.MixProject do
       {:kino, "~> 0.19.0", only: :dev},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:uuid, "~> 1.1"},
+      {:stream_data, "~> 1.3"},
       {:open_api_spex, "~> 3.22"}
     ]
   end
