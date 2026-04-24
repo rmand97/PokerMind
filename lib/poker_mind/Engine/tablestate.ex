@@ -212,7 +212,7 @@ defmodule PokerMind.Engine.TableState do
         start_from_player
         # if inactive pick next active
       else
-        find_next_active_player(state, start_from_player)
+        find_next_active_player(state, start_from_player.id)
       end
 
     %{state | current_player_id: start_from_player.id}
