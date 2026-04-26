@@ -302,7 +302,11 @@ defmodule PokerMind.Engine.TableStateTest do
         assert length(player.current_hand) == length(updated_player.current_hand)
         assert player.current_hand != updated_player.current_hand
         # Current_bet, has_acted and state is reset
-        assert updated_player.current_bet == 0
+        # Current_bet depends on whether the player is chosen as small_blind or big_blind
+        assert updated_player.current_bet == 0 or
+                 updated_player.current_bet == 50 or
+                 updated_player.current_bet == 100
+
         assert updated_player.has_acted == false
         assert updated_player.state == :active_in_hand
       end
@@ -392,7 +396,7 @@ defmodule PokerMind.Engine.TableStateTest do
       assert updated_player2.remaining_chips == 50
       assert updated_player2.current_bet == 50
 
-      assert updated_state.pot == 70
+      assert updated_state.pot == state.pot + 70
     end
   end
 

@@ -79,7 +79,7 @@ defmodule PokerMind.Engine.ActionsTest do
       assert TableState.get_player(new_state, starting_player_id).state == :active_in_hand
 
       # checking doesn't add to the pot
-      assert new_state.pot == 0
+      assert new_state.pot == state.pot
     end
 
     test "Test of check apply_action next player logic", %{state: init_state} do
@@ -104,13 +104,16 @@ defmodule PokerMind.Engine.ActionsTest do
       # No outstanding bet means everyone can legitimately check
       state = %{init_state | highest_raise: 0}
       num_player = length(state.players)
+      # reset every players current_bet, as some have been incremented when setting blinds
+      reset_current_bet_state =
+        Enum.reduce(state.players, state, fn player, current_state ->
+          PlayerState.update_current_bet(current_state, player.id, 0)
+        end)
+
       # all players check
       updated_state =
-        Enum.reduce(1..num_player, state, fn _, state ->
-          new_state =
-            Actions.apply_action(state, %{type: :check, player_id: state.current_player_id})
-
-          new_state
+        Enum.reduce(1..num_player, reset_current_bet_state, fn _, state ->
+          Actions.apply_action(state, %{type: :check, player_id: state.current_player_id})
         end)
 
       # all players should have has_acted reset to false for the next betting round
@@ -118,7 +121,7 @@ defmodule PokerMind.Engine.ActionsTest do
       # phase should advance to flop
       assert updated_state.phase == :flop
       # pot should remain unchanged because no bets were made
-      assert updated_state.pot == 0
+      assert updated_state.pot == init_state.pot
     end
   end
 
@@ -146,7 +149,7 @@ defmodule PokerMind.Engine.ActionsTest do
       assert TableState.get_player(new_state, starting_player_id).state == :active_in_hand
 
       # pot size should be updated with the raise amount
-      assert new_state.pot == 2 * init_state.big_blind_amount
+      assert new_state.pot == init_state.pot + 2 * init_state.big_blind_amount
       # check that starting player has the correct remaining chips after the raise
 
       starting_player_remaining_chips =
@@ -196,7 +199,8 @@ defmodule PokerMind.Engine.ActionsTest do
       assert TableState.get_player(new_state, next_player_id).state == :active_in_hand
 
       # pot size should be updated with the call amount
-      assert new_state.pot == 2 * init_state.big_blind_amount + init_state.highest_raise
+      assert new_state.pot ==
+               init_state.pot + 2 * init_state.big_blind_amount + init_state.highest_raise
 
       # check that next player has the correct remaining chips after the call
       next_player_remaining_chips =
@@ -323,7 +327,9 @@ defmodule PokerMind.Engine.ActionsTest do
         Actions.apply_action(after_raise, %{type: :call, player_id: p2, amount: 500})
 
       p3 = after_call.current_player_id
-      matching_state = TableState.set_player_value(after_call, p3, :remaining_chips, 500)
+      # Hard-coding player 3's remaining chips to perform all-in which matches the highest raise
+      # - 50 as the third player will always be small blind with 4 players
+      matching_state = TableState.set_player_value(after_call, p3, :remaining_chips, 500 - 50)
 
       final = Actions.apply_action(matching_state, %{type: :all_in, player_id: p3})
 

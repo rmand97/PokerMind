@@ -90,7 +90,12 @@ defmodule PokerMind.Engine.TableState do
     new_state
     |> Map.put(:highest_raise, big_blind)
     |> Map.put(:big_blind_amount, big_blind)
+    |> add_to_pot(new_state.small_blind_id, div(big_blind, 2))
     |> advance_player(:current_player_id, new_state.small_blind_id)
+    |> then(fn state ->
+      big_blind_id = state.current_player_id
+      add_to_pot(state, big_blind_id, big_blind)
+    end)
     |> advance_player()
   end
 
