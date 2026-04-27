@@ -136,8 +136,7 @@ defmodule PokerMind.Engine.ActionsTest do
     test "raise action", %{state: init_state} do
       starting_player_id = init_state.current_player_id
 
-      starting_stack =
-        Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
+      starting_stack = TableState.get_player(init_state, starting_player_id).remaining_chips
 
       # Perform raise action with valid amount
       new_state =
@@ -161,8 +160,9 @@ defmodule PokerMind.Engine.ActionsTest do
       # pot size should be updated with the raise amount
       assert new_state.pot == 2 * init_state.big_blind_amount
       # check that starting player has the correct remaining chips after the raise
+
       starting_player_remaining_chips =
-        Enum.find(new_state.players, &(&1.id == starting_player_id)).remaining_chips
+        TableState.get_player(new_state, starting_player_id).remaining_chips
 
       # check that chips were deducted from startingplayer stack
       assert starting_player_remaining_chips == starting_stack - 2 * init_state.big_blind_amount
@@ -186,8 +186,7 @@ defmodule PokerMind.Engine.ActionsTest do
     test "Call action", %{state: init_state} do
       starting_player_id = init_state.current_player_id
 
-      starting_stack =
-        Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
+      starting_stack = TableState.get_player(init_state, starting_player_id).remaining_chips
 
       # Perform raise action with valid amount
       new_state =
@@ -218,7 +217,7 @@ defmodule PokerMind.Engine.ActionsTest do
 
       # check that next player has the correct remaining chips after the call
       next_player_remaining_chips =
-        Enum.find(new_state.players, &(&1.id == next_player_id)).remaining_chips
+        TableState.get_player(new_state, next_player_id).remaining_chips
 
       # check that chips were deducted from next player stack
       assert next_player_remaining_chips == starting_stack - init_state.highest_raise
@@ -230,13 +229,12 @@ defmodule PokerMind.Engine.ActionsTest do
     test "all_in action", %{state: init_state} do
       starting_player_id = init_state.current_player_id
 
-      starting_stack =
-        Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
+      starting_stack = TableState.get_player(init_state, starting_player_id).remaining_chips
 
       all_in_state =
         Actions.apply_action(init_state, %{type: :all_in, player_id: starting_player_id})
 
-      all_in_player = Enum.find(all_in_state.players, &(&1.id == starting_player_id))
+      all_in_player = TableState.get_player(all_in_state, starting_player_id)
 
       # player is now :all_in and has acted
       assert all_in_player.state == :all_in
@@ -258,8 +256,7 @@ defmodule PokerMind.Engine.ActionsTest do
     } do
       starting_player_id = init_state.current_player_id
 
-      starting_stack =
-        Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
+      starting_stack = TableState.get_player(init_state, starting_player_id).remaining_chips
 
       already_committed = 50
 
@@ -273,7 +270,7 @@ defmodule PokerMind.Engine.ActionsTest do
       new_state =
         Actions.apply_action(state_with_commit, %{type: :all_in, player_id: starting_player_id})
 
-      all_in_player = Enum.find(new_state.players, &(&1.id == starting_player_id))
+      all_in_player = TableState.get_player(new_state, starting_player_id)
 
       # pot grows only by the uncommitted portion of the stack
       assert new_state.pot == init_state.pot + (starting_stack - already_committed)
@@ -466,7 +463,7 @@ defmodule PokerMind.Engine.ActionsTest do
                })
 
       player_remaining_chips =
-        Enum.find(init_state.players, &(&1.id == starting_player_id)).remaining_chips
+        TableState.get_player(init_state, starting_player_id).remaining_chips
 
       # raise with amount more than players entire stack
       assert Actions.apply_action(init_state, %{
