@@ -20,21 +20,15 @@ defmodule PokerMind.Engine.ActionsTest do
       player_who_is_folding = init_state.current_player_id
       # assert init_state.small_blind +2  == init_state.current_player_id
 
-      # Check that current player is in players list and "active_in_hand"
-      assert Enum.any?(
-               init_state.players,
-               fn player ->
-                 player.id == player_who_is_folding and player.state == :active_in_hand
-               end
-             )
+      # Check that current player is in players list and "active_in_hand" before folding
+      assert TableState.get_player(init_state, player_who_is_folding).state == :active_in_hand
 
       # apply fold action to current player
       new_state =
         Actions.apply_action(init_state, %{type: :fold, player_id: init_state.current_player_id})
 
       # Have the player succesfully folded?
-      folded_player =
-        Enum.find(new_state.players, fn player -> player.id == player_who_is_folding end)
+      folded_player = TableState.get_player(new_state, player_who_is_folding)
 
       assert folded_player.state == :inactive_in_hand
 
@@ -62,7 +56,7 @@ defmodule PokerMind.Engine.ActionsTest do
         })
 
       # did fold action go through?
-      assert Enum.any?(fold_state.players, &(&1.id == starting_player_id and &1.has_acted))
+      assert TableState.get_player(fold_state, starting_player_id).has_acted
 
       # next player has to act
       assert starting_player_id != fold_state.current_player_id
@@ -78,14 +72,11 @@ defmodule PokerMind.Engine.ActionsTest do
       state = %{init_state | highest_raise: 0}
       new_state = Actions.apply_action(state, %{type: :check, player_id: starting_player_id})
 
-      assert Enum.any?(new_state.players, &(&1.id == starting_player_id and &1.has_acted))
+      assert TableState.get_player(new_state, starting_player_id).has_acted
       assert starting_player_id != new_state.current_player_id
 
       # check that starting player is still :active_in_hand
-      assert Enum.any?(
-               new_state.players,
-               &(&1.id == starting_player_id and &1.state == :active_in_hand)
-             )
+      assert TableState.get_player(new_state, starting_player_id).state == :active_in_hand
 
       # checking doesn't add to the pot
       assert new_state.pot == 0
@@ -103,7 +94,7 @@ defmodule PokerMind.Engine.ActionsTest do
         })
 
       # did check action go through?
-      assert Enum.any?(check_state.players, &(&1.id == starting_player_id and &1.has_acted))
+      assert TableState.get_player(check_state, starting_player_id).has_acted
 
       # next player has to act
       assert starting_player_id != check_state.current_player_id
@@ -147,15 +138,12 @@ defmodule PokerMind.Engine.ActionsTest do
         })
 
       # did action go through?
-      assert Enum.any?(new_state.players, &(&1.id == starting_player_id and &1.has_acted))
+      assert TableState.get_player(new_state, starting_player_id).has_acted
       # Next player has to act
       assert starting_player_id != new_state.current_player_id
 
       # check that starting player is still :active_in_hand
-      assert Enum.any?(
-               new_state.players,
-               &(&1.id == starting_player_id and &1.state == :active_in_hand)
-             )
+      assert TableState.get_player(new_state, starting_player_id).state == :active_in_hand
 
       # pot size should be updated with the raise amount
       assert new_state.pot == 2 * init_state.big_blind_amount
@@ -207,10 +195,7 @@ defmodule PokerMind.Engine.ActionsTest do
         })
 
       # check that the calling player is still :active_in_hand
-      assert Enum.any?(
-               new_state.players,
-               &(&1.id == next_player_id and &1.state == :active_in_hand)
-             )
+      assert TableState.get_player(new_state, next_player_id).state == :active_in_hand
 
       # pot size should be updated with the call amount
       assert new_state.pot == 2 * init_state.big_blind_amount + init_state.highest_raise
@@ -559,7 +544,7 @@ defmodule PokerMind.Engine.ActionsTest do
         })
 
       # did raise action go through?
-      assert Enum.any?(raise_state.players, &(&1.id == starting_player_id and &1.has_acted))
+      assert TableState.get_player(raise_state, starting_player_id).has_acted
 
       # next player has to act
       assert starting_player_id != raise_state.current_player_id
@@ -574,7 +559,7 @@ defmodule PokerMind.Engine.ActionsTest do
         })
 
       # did call action go through?
-      assert Enum.any?(call_state.players, &(&1.id == call_player_id and &1.has_acted))
+      assert TableState.get_player(call_state, call_player_id).has_acted
 
       # next player has to act
       assert call_player_id != call_state.current_player_id
