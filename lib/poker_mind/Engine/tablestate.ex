@@ -293,7 +293,7 @@ defmodule PokerMind.Engine.TableState do
     player as a refund rather than paid out as a pot.
   """
   def build_pots(%__MODULE__{players: players}) do
-    still_in = Enum.filter(players, &(&1.state in [:active_in_hand, :all_in]))
+    players_still_in_hand = Enum.filter(players, &(&1.state in [:active_in_hand, :all_in]))
 
     levels =
       still_in
@@ -308,7 +308,7 @@ defmodule PokerMind.Engine.TableState do
             sum + max(0, min(p.total_contributed, level) - prev_level)
           end)
 
-        eligible_ids =
+        eligible_player_ids =
           still_in
           |> Enum.filter(&(&1.total_contributed >= level))
           |> Enum.map(& &1.id)
@@ -528,8 +528,8 @@ defmodule PokerMind.Engine.TableState do
   end
 
   defp pay_pot(%__MODULE__{} = state, amount, winners) do
-    count = length(winners)
-    leftover = rem(amount, count)
+    num_winners = length(winners)
+    leftover_amount = rem(amount, count)
     share = div(amount - leftover, count)
 
     state
