@@ -126,13 +126,14 @@ defmodule PokerMind.Engine.TableStateTest do
            state: state
          } do
       new_state =
-        Enum.reduce(1..9, state, fn _, current_state ->
+        Enum.reduce(1..9, state, fn i, current_state ->
           after_hand_finished =
             current_state
             |> TableState.advance_phase(:showdown)
             |> TableState.advance_phase(:hand_finished)
 
           # big blind amount stays the same for the first 9 hands
+          assert after_hand_finished.hands_played == i
           assert after_hand_finished.big_blind_amount == state.big_blind_amount
           after_hand_finished
         end)
