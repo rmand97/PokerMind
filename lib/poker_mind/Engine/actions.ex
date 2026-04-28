@@ -127,10 +127,10 @@ defmodule PokerMind.Engine.Actions do
       player.current_bet == amount ->
         {:error, "Current_bet = new raise amount - did we already perform this bet?"}
 
-      amount < 2 * state.highest_raise ->
+      amount < 2 * state.big_blind_amount ->
         {:error, "Not a valid raise - assume bet size too small"}
 
-      amount >= 2 * state.highest_raise ->
+      amount >= 2 * state.big_blind_amount ->
         :ok
 
       true ->
