@@ -116,8 +116,11 @@ defmodule PokerMind.Engine.TableState do
     index = Enum.find_index(state.players, fn p -> p.id == from_player_id end)
     next_player = Enum.at(state.players, rem(index + 1, length(state.players)))
 
-    state
-    |> Map.put(key, next_player.id)
+    if next_player.state in [:active_in_hand] do
+      state |> Map.put(key, next_player.id)
+    else
+      advance_player(state, key, next_player.id)
+    end
   end
 
   defp new_deck(%__MODULE__{} = state) do
@@ -280,16 +283,25 @@ defmodule PokerMind.Engine.TableState do
       when is_integer(amount) and amount > 0 do
     amount_difference = amount - get_player(state, player_id).current_bet
     player_contribution = get_player(state, player_id).total_contributed
+    player = get_player(state, player_id)
 
-    state
+    {updated_state, amount_to_add} =
+      if amount_difference >= player.remaining_chips do
+        state = set_player_value(state, player.id, :state, :all_in)
+        {state, player.remaining_chips}
+      else
+        {state, amount_difference}
+      end
+
+    updated_state
     |> set_player_value(
       player_id,
       :total_contributed,
-      player_contribution + amount_difference
+      player_contribution + amount_to_add
     )
-    |> PlayerState.deduct_chips(player_id, amount_difference)
+    |> PlayerState.deduct_chips(player_id, amount_to_add)
     |> PlayerState.update_current_bet(player_id, amount)
-    |> Map.put(:pot, state.pot + amount_difference)
+    |> Map.put(:pot, updated_state.pot + amount_to_add)
   end
 
   @doc """
