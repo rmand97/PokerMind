@@ -357,8 +357,8 @@ defmodule PokerMind.Engine.ActionsTest do
       p3 = after_call.current_player_id
       final = Actions.apply_action(after_call, %{type: :all_in, player_id: p3})
 
-      # full stack (1000) goes in over the top of highest_raise 500
-      assert final.highest_raise == 1000
+      # full stack (10_000) goes in over the top of highest_raise 500
+      assert final.highest_raise == 10_000
       refute TableState.get_player(final, p1).has_acted
       refute TableState.get_player(final, p2).has_acted
       assert TableState.get_player(final, p3).state == :all_in
