@@ -61,6 +61,24 @@ defmodule PokerMind.Engine.ActionsTest do
       # next player has to act
       assert starting_player_id != fold_state.current_player_id
     end
+
+    test "rejects fold when caller is the last live player", %{state: init_state} do
+      # Regression: previously, if every other seat was already :inactive_in_hand,
+      # the current player could fold themselves out too — leaving zero contestants.
+      # handle_showdown then called split_pot([]), which evaluated rem(pot, 0) and
+      # crashed the engine. validate_fold/2 must reject this case.
+
+      [last_active_player | other_players] = init_state.players
+
+      players =
+        [%{last_active_player | state: :active_in_hand, has_acted: false}] ++
+          Enum.map(other_players, &%{&1 | state: :inactive_in_hand})
+
+      state = %{init_state | players: players, current_player_id: last_active_player.id}
+
+      assert {:error, {:cannot_fold_last_player, _}} =
+               Actions.apply_action(state, %{type: :fold, player_id: last_active_player.id})
+    end
   end
 
   describe "apply_action :check" do
