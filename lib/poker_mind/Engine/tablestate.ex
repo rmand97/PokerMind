@@ -509,6 +509,7 @@ defmodule PokerMind.Engine.TableState do
           |> set_player_value(player.id, :current_hand, [])
           |> set_player_value(player.id, :current_bet, 0)
           |> set_player_value(player.id, :has_acted, false)
+          |> set_player_value(player.id, :total_contributed, 0)
           |> reset_player_state(player)
         end)
 

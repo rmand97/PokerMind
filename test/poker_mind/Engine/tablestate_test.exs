@@ -332,6 +332,10 @@ defmodule PokerMind.Engine.TableStateTest do
         assert updated_player.current_bet == 0 or
                  updated_player.current_bet == 50 or
                  updated_player.current_bet == 100
+        # Total_contributed depends on whether the player is chosen as small_blind or big_blind
+        assert updated_player.total_contributed == 0 or
+                 updated_player.total_contributed == 50 or
+                 updated_player.total_contributed == 100
 
         assert updated_player.has_acted == false
         assert updated_player.state == :active_in_hand
