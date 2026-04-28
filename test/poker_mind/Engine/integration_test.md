@@ -53,14 +53,14 @@
 
 ### Action
 - Pre-flop: P2 raises to 500, P1 re-raises to 1500, P2 calls  
-- Flop: P1 bets 2000, P2 goes all-in for 7200, P1 calls remaining 5200  
+- Flop: P2 checks, P1 bets 2000, P2 goes all-in for 7200, P1 calls remaining 5200  
 
 ### Showdown
 - **P2 wins** with a flush  
 
 ### Chip Counts
-- **P1:** 2,100  
-- **P2:** 17,900  
+- **P1:** 2,600  
+- **P2:** 17,400  
 
 ---
 
