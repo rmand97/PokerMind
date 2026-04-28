@@ -686,5 +686,76 @@ defmodule PokerMind.Engine.ActionsTest do
                &(&1.total_contributed == 2 * init_state.big_blind_amount)
              )
     end
+
+    # Regression: previously advance_player_turn/2 unconditionally called
+    # set_current_player_for_phase/1 after every phase advance, even when the
+    # advance landed on :showdown / :hand_finished / :game_finished — phases
+    # where no player can act. With zero :active_in_hand players the fallback
+    # in set_current_player_for_phase/1 returned nil and crashed with
+    # BadMapError on nil.id.
+    test "3-player starting_player fold, small_blind all-in, big_blind folds and state reaches showdown without crashing" do
+      # Shrunk action sequence from tablestate_property_test seed 353104:
+      # starting_player folds; small_blind goes over-the-top all-in (re-opens betting, resets
+      # has_acted across the table); big_blind folds — leaving zero :active_in_hand
+      # players. round_complete? is vacuously true, next_phase is :showdown,
+      # and the pot is uncontested → small_blind is refunded.
+      init_state =
+        TableState.init(TableState.new(UUID.uuid4()), ["asbjørn", "stine", "rolf"])
+
+      starting_player = init_state.current_player_id
+      small_blind = init_state.small_blind_id
+
+      after_starting_player_fold =
+        Actions.apply_action(init_state, %{type: :fold, player_id: starting_player})
+
+      assert after_starting_player_fold.current_player_id == small_blind
+
+      after_small_blind_all_in =
+        Actions.apply_action(after_starting_player_fold, %{type: :all_in, player_id: small_blind})
+
+      big_blind = after_small_blind_all_in.current_player_id
+      assert big_blind != small_blind and big_blind != starting_player
+
+      final = Actions.apply_action(after_small_blind_all_in, %{type: :fold, player_id: big_blind})
+
+      # No crash. Phase resolved to :showdown and the pot was refunded to small_blind
+      # (the only player still in the hand). small_blind started with 10_000, paid 50
+      # in blinds, went all-in for 10_000, and is refunded the full 10_100
+      # pot — netting big_blind's 100 forfeit.
+      assert final.phase == :showdown
+      assert final.pot == 0
+      assert TableState.get_player(final, small_blind).remaining_chips == 10_100
+      assert TableState.get_player(final, small_blind).state == :all_in
+    end
+
+    test "completing a hand starts the next hand with a valid current_player",
+         %{state: init_state} do
+      # The fix excludes :pre_flop from set_current_player_for_phase because
+      # possible_new_hand/1 already sets current_player_id via set_blinds(false).
+      # Verify the next hand still has a valid actor and accepts an action.
+      others = Enum.reject(init_state.players, &(&1.id == init_state.small_blind_id))
+
+      with_only_small_blind_active =
+        Enum.reduce(others, init_state, fn player, acc ->
+          TableState.set_player_value(acc, player.id, :state, :inactive_in_hand)
+        end)
+
+      after_showdown = TableState.advance_phase(with_only_small_blind_active, :showdown)
+      next_hand = TableState.advance_phase(after_showdown, :hand_finished)
+
+      assert next_hand.phase == :pre_flop
+      assert next_hand.winner == nil
+      assert next_hand.current_player_id != nil
+
+      current = TableState.get_player(next_hand, next_hand.current_player_id)
+      assert current.state == :active_in_hand
+
+      # And the engine accepts an action from the new current player.
+      result =
+        Actions.apply_action(next_hand, %{type: :fold, player_id: next_hand.current_player_id})
+
+      refute match?({:error, _}, result)
+      assert TableState.get_player(result, next_hand.current_player_id).state == :inactive_in_hand
+    end
   end
 end
