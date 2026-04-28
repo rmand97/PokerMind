@@ -450,6 +450,7 @@ defmodule PokerMind.Engine.TableState do
     |> apply_refunds(refunds)
     |> apply_pot_distribution(pots)
     |> Map.put(:pot, 0)
+    |> advance_phase(:hand_finished)
   end
 
   defp apply_refunds(%__MODULE__{} = state, refunds) do
