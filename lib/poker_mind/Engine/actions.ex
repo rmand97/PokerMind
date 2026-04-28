@@ -134,6 +134,9 @@ defmodule PokerMind.Engine.Actions do
     else
       {:error,
        {:cannot_fold_last_player, "Cannot fold when no other players are still in the hand"}}
+    end
+  end
+
   defp validate_call(%TableState{highest_raise: highest_raise}, amount) when is_integer(amount) do
     if amount == highest_raise do
       :ok
