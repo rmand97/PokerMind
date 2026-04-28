@@ -23,7 +23,8 @@ defmodule PokerMind.Engine.TableState do
     # bet to match
     :highest_raise,
     :big_blind_amount,
-    :winner
+    :winner,
+    :hands_played
   ]
 
   def new(id) when is_binary(id) do
@@ -34,7 +35,8 @@ defmodule PokerMind.Engine.TableState do
       players: [],
       pot: 0,
       deck: [],
-      community_cards: []
+      community_cards: [],
+      hands_played: 0
     }
   end
 
@@ -57,7 +59,7 @@ defmodule PokerMind.Engine.TableState do
   defp add_player(%__MODULE__{} = state, new_player_id)
        when is_binary(new_player_id)
        when is_list(state.players) do
-    new_player = PlayerState.new(new_player_id, 1000)
+    new_player = PlayerState.new(new_player_id, 10_000)
 
     Map.put(state, :players, [new_player | state.players])
   end
@@ -75,7 +77,6 @@ defmodule PokerMind.Engine.TableState do
     %__MODULE__{state | players: updated_players}
   end
 
-  # TODO: update with setting blinds and deducting chips from players
   defp set_blinds(%__MODULE__{} = state, new_table \\ true) when is_boolean(new_table) do
     new_state =
       if new_table do
@@ -85,12 +86,19 @@ defmodule PokerMind.Engine.TableState do
         advance_player(state, :small_blind_id, state.small_blind_id)
       end
 
-    big_blind = 100
+    base_blind = 100
+    increase_every = 10
+    big_blind = base_blind * 2 ** div(state.hands_played, increase_every)
 
     new_state
     |> Map.put(:highest_raise, big_blind)
     |> Map.put(:big_blind_amount, big_blind)
+    |> add_to_pot(new_state.small_blind_id, div(big_blind, 2))
     |> advance_player(:current_player_id, new_state.small_blind_id)
+    |> then(fn state ->
+      big_blind_id = state.current_player_id
+      add_to_pot(state, big_blind_id, big_blind)
+    end)
     |> advance_player()
   end
 
@@ -351,7 +359,7 @@ defmodule PokerMind.Engine.TableState do
   end
 
   def reset_highest_raise(%__MODULE__{} = state) do
-    Map.put(state, :highest_raise, state.big_blind_amount)
+    Map.put(state, :highest_raise, 0)
   end
 
   def compare_cards(rank1, rank2)
@@ -501,10 +509,12 @@ defmodule PokerMind.Engine.TableState do
           |> set_player_value(player.id, :current_hand, [])
           |> set_player_value(player.id, :current_bet, 0)
           |> set_player_value(player.id, :has_acted, false)
+          |> set_player_value(player.id, :total_contributed, 0)
           |> reset_player_state(player)
         end)
 
       new_state
+      |> Map.put(:hands_played, new_state.hands_played + 1)
       |> Map.put(:community_cards, [])
       |> new_deck()
       |> set_blinds(false)

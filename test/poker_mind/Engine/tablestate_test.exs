@@ -98,7 +98,7 @@ defmodule PokerMind.Engine.TableStateTest do
       end
     end
 
-    test "set_blinds/1 - more than 2 players, a player is chosen as small blind and another as current player",
+    test "set_blinds/2 - more than 2 players, a player is chosen as small blind and another as current player",
          %{
            state: state
          } do
@@ -107,7 +107,7 @@ defmodule PokerMind.Engine.TableStateTest do
       assert state.small_blind_id != state.current_player_id
     end
 
-    test "set_blinds/1 - exactly 2 players, a player is chosen as both small blind and current player" do
+    test "set_blinds/2 - exactly 2 players, a player is chosen as both small blind and current player" do
       players =
         [
           "stine",
@@ -119,6 +119,32 @@ defmodule PokerMind.Engine.TableStateTest do
       assert Enum.any?(state.players, fn player -> player.id == state.small_blind_id end)
       assert Enum.any?(state.players, fn player -> player.id == state.current_player_id end)
       assert state.small_blind_id == state.current_player_id
+    end
+
+    test "set_blinds/2 - blinds increases to the double every 10 hands",
+         %{
+           state: state
+         } do
+      new_state =
+        Enum.reduce(1..9, state, fn i, current_state ->
+          after_hand_finished =
+            current_state
+            |> TableState.advance_phase(:showdown)
+            |> TableState.advance_phase(:hand_finished)
+
+          # big blind amount stays the same for the first 9 hands
+          assert after_hand_finished.hands_played == i
+          assert after_hand_finished.big_blind_amount == state.big_blind_amount
+          after_hand_finished
+        end)
+
+      final_state =
+        new_state
+        |> TableState.advance_phase(:showdown)
+        |> TableState.advance_phase(:hand_finished)
+
+      # big_blind doubles when 10 hands has been played
+      assert final_state.big_blind_amount == state.big_blind_amount * 2
     end
   end
 
@@ -302,7 +328,16 @@ defmodule PokerMind.Engine.TableStateTest do
         assert length(player.current_hand) == length(updated_player.current_hand)
         assert player.current_hand != updated_player.current_hand
         # Current_bet, has_acted and state is reset
-        assert updated_player.current_bet == 0
+        # Current_bet depends on whether the player is chosen as small_blind or big_blind
+        assert updated_player.current_bet == 0 or
+                 updated_player.current_bet == 50 or
+                 updated_player.current_bet == 100
+
+        # Total_contributed depends on whether the player is chosen as small_blind or big_blind
+        assert updated_player.total_contributed == 0 or
+                 updated_player.total_contributed == 50 or
+                 updated_player.total_contributed == 100
+
         assert updated_player.has_acted == false
         assert updated_player.state == :active_in_hand
       end
@@ -344,6 +379,26 @@ defmodule PokerMind.Engine.TableStateTest do
       # stine is the winner of the table
       assert final_state.winner == "stine"
       assert final_state.phase == :game_finished
+    end
+  end
+
+  describe "set_current_player_for_phase/1" do
+    test "post-flop fallback when small blind is inactive picks next active player",
+         %{state: state} do
+      # Regression: post-flop the phase starter is the small blind. When the
+      # small blind is not :active_in_hand, the fallback used to pass the
+      # player struct into find_next_active_player/2, which is guarded by
+      # is_binary/1 — raising FunctionClauseError.
+      result =
+        state
+        |> Map.put(:phase, :flop)
+        |> TableState.set_player_value(state.small_blind_id, :state, :inactive_in_hand)
+        |> TableState.set_current_player_for_phase()
+
+      assert result.current_player_id != state.small_blind_id
+
+      assert TableState.get_player(result, result.current_player_id).state ==
+               :active_in_hand
     end
   end
 
@@ -392,7 +447,7 @@ defmodule PokerMind.Engine.TableStateTest do
       assert updated_player2.remaining_chips == 50
       assert updated_player2.current_bet == 50
 
-      assert updated_state.pot == 70
+      assert updated_state.pot == state.pot + 70
     end
   end
 
@@ -653,9 +708,9 @@ defmodule PokerMind.Engine.TableStateTest do
   end
 
   describe " reset of betting round helpers" do
-    test "reset_highest_raise/1 - resets highest_raise to big_blind_amount", %{state: state} do
+    test "reset_highest_raise/1 - resets highest_raise to 0", %{state: state} do
       state = Map.put(state, :highest_raise, 500)
-      assert TableState.reset_highest_raise(state).highest_raise == state.big_blind_amount
+      assert TableState.reset_highest_raise(state).highest_raise == 0
     end
 
     test "reset_current_bet/1 - zeros current_bet for all players", %{state: state} do

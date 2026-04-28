@@ -12,6 +12,7 @@ defmodule PokerMind.Engine.Actions do
       state
       |> TableState.add_to_pot(player_id, amount)
       |> TableState.update_highest_raise(amount)
+      |> TableState.reset_has_acted()
       |> advance_player_turn(:raise)
     end
   end
@@ -123,12 +124,12 @@ defmodule PokerMind.Engine.Actions do
   end
 
   defp validate_fold(%TableState{players: players}, player_id) do
-    others_still_live =
+    other_players_still_active? =
       Enum.any?(players, fn p ->
         p.id != player_id and p.state in [:active_in_hand, :all_in]
       end)
 
-    if others_still_live do
+    if other_players_still_active? do
       :ok
     else
       {:error,
@@ -152,10 +153,10 @@ defmodule PokerMind.Engine.Actions do
       player.current_bet == amount ->
         {:error, "Current_bet = new raise amount - did we already perform this bet?"}
 
-      amount < 2 * state.highest_raise ->
+      amount < 2 * state.big_blind_amount ->
         {:error, "Not a valid raise - assume bet size too small"}
 
-      amount >= 2 * state.highest_raise ->
+      amount >= 2 * state.big_blind_amount ->
         :ok
 
       true ->
