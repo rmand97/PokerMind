@@ -377,6 +377,26 @@ defmodule PokerMind.Engine.TableStateTest do
     end
   end
 
+  describe "set_current_player_for_phase/1" do
+    test "post-flop fallback when small blind is inactive picks next active player",
+         %{state: state} do
+      # Regression: post-flop the phase starter is the small blind. When the
+      # small blind is not :active_in_hand, the fallback used to pass the
+      # player struct into find_next_active_player/2, which is guarded by
+      # is_binary/1 — raising FunctionClauseError.
+      result =
+        state
+        |> Map.put(:phase, :flop)
+        |> TableState.set_player_value(state.small_blind_id, :state, :inactive_in_hand)
+        |> TableState.set_current_player_for_phase()
+
+      assert result.current_player_id != state.small_blind_id
+
+      assert TableState.get_player(result, result.current_player_id).state ==
+               :active_in_hand
+    end
+  end
+
   describe "complete_current_player_turn/1" do
     test "complete_current_player_turn/1 - current players `has_acted` is set to `true`", %{
       state: state
