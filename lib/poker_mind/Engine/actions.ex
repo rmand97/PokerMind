@@ -122,12 +122,12 @@ defmodule PokerMind.Engine.Actions do
   end
 
   defp validate_fold(%TableState{players: players}, player_id) do
-    others_still_live =
+    other_players_still_active? =
       Enum.any?(players, fn p ->
         p.id != player_id and p.state in [:active_in_hand, :all_in]
       end)
 
-    if others_still_live do
+    if other_players_still_active? do
       :ok
     else
       {:error,

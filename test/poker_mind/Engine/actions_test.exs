@@ -68,16 +68,16 @@ defmodule PokerMind.Engine.ActionsTest do
       # handle_showdown then called split_pot([]), which evaluated rem(pot, 0) and
       # crashed the engine. validate_fold/2 must reject this case.
 
-      [last_live | others] = init_state.players
+      [last_active_player | other_players] = init_state.players
 
       players =
-        [%{last_live | state: :active_in_hand, has_acted: false}] ++
-          Enum.map(others, &%{&1 | state: :inactive_in_hand})
+        [%{last_active_player | state: :active_in_hand, has_acted: false}] ++
+          Enum.map(other_players, &%{&1 | state: :inactive_in_hand})
 
-      state = %{init_state | players: players, current_player_id: last_live.id}
+      state = %{init_state | players: players, current_player_id: last_active_player.id}
 
       assert {:error, {:cannot_fold_last_player, _}} =
-               Actions.apply_action(state, %{type: :fold, player_id: last_live.id})
+               Actions.apply_action(state, %{type: :fold, player_id: last_active_player.id})
     end
   end
 
