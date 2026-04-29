@@ -562,28 +562,34 @@ defmodule PokerMind.Engine.ActionsTest do
     } do
       starting_player_id = init_state.current_player_id
 
-      updated_state =
+      raise_state =
+        init_state
+        |> TableState.set_player_value(starting_player_id, :current_bet, 2000)
+        |> TableState.set_player_value(starting_player_id, :remaining_chips, 1000)
+        |> Map.put(:highest_raise, 2000)
+
+      # Raising with 2500 is valid even though remaining chips for starting player is 1000
+      # as it already has 2000 chips as current bet
+      assert %TableState{} =
+               Actions.apply_action(raise_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 amount: 2500
+               })
+
+      call_state =
         init_state
         |> TableState.set_player_value(starting_player_id, :current_bet, 1000)
         |> TableState.set_player_value(starting_player_id, :remaining_chips, 1000)
         |> Map.put(:highest_raise, 2000)
 
-      # Raising with 1500 is valid even though remaining chips for starting player is 1000
-      # as it already has 1000 chips as current bet
-      assert %TableState{} =
-               Actions.apply_action(updated_state, %{
-                 type: :raise,
-                 player_id: starting_player_id,
-                 amount: 1500
-               })
-
-      # Calling with 2000 is valid even though remaining chips for starting player is 1000
-      # as it already has 1000 chips as current bet. Error is do to the player going all_in.
+      # Calling with 2000 is valid for amount even though remaining chips for starting player is 1000
+      # as it already has 1000 chips as current bet. Error is due to the player going all_in.
       assert {:error, {:use_all_in_action, _}} =
-               Actions.apply_action(updated_state, %{
+               Actions.apply_action(call_state, %{
                  type: :call,
                  player_id: starting_player_id,
-                 amount: updated_state.highest_raise
+                 amount: call_state.highest_raise
                })
     end
 
@@ -609,7 +615,7 @@ defmodule PokerMind.Engine.ActionsTest do
         )
 
       # raise amount equal to current bet
-      assert {:error, {:already_performed_raise, _}} =
+      assert {:error, {:current_bet_matches_raise, _}} =
                Actions.apply_action(init_state, %{
                  type: :raise,
                  player_id: starting_player_id,
@@ -621,6 +627,46 @@ defmodule PokerMind.Engine.ActionsTest do
                  type: :raise,
                  player_id: starting_player_id,
                  amount: 8 * init_state.big_blind_amount
+               })
+    end
+
+    test "validate_raise/3 - dynamically update raise_amount within a betting round", %{
+      state: init_state
+    } do
+      starting_player_id = init_state.current_player_id
+
+      # starting player can raise with 1*big_blind as default
+      assert %TableState{} =
+               Actions.apply_action(init_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 amount: 2 * init_state.big_blind_amount
+               })
+
+      # starting player raises with 2*big_blind
+      next_state =
+        Actions.apply_action(init_state, %{
+          type: :raise,
+          player_id: starting_player_id,
+          amount: 3 * init_state.big_blind_amount
+        })
+
+      next_player_id = next_state.current_player_id
+
+      # The following player cannot raise with 1*big_blind now
+      assert {:error, {:invalid_raise, _}} =
+               Actions.apply_action(next_state, %{
+                 type: :raise,
+                 player_id: next_player_id,
+                 amount: 4 * init_state.big_blind_amount
+               })
+
+      # The following player has to raise with 2*big_blind now
+      assert %TableState{} =
+               Actions.apply_action(next_state, %{
+                 type: :raise,
+                 player_id: next_player_id,
+                 amount: 5 * init_state.big_blind_amount
                })
     end
   end

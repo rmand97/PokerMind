@@ -378,7 +378,7 @@ defmodule PokerMind.Engine.TableState do
 
   def update_raise_amount(%__MODULE__{} = state, amount)
       when is_integer(amount) and amount > 0 do
-    Map.put(state, :raise_amount, amount - state.highest_raise)
+    Map.put(state, :raise_amount, amount)
   end
 
   def reset_highest_raise(%__MODULE__{} = state) do

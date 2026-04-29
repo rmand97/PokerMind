@@ -12,7 +12,7 @@ defmodule PokerMind.Engine.Actions do
       state
       |> TableState.add_to_pot(player_id, amount)
       |> TableState.update_highest_raise(amount)
-      |> TableState.update_raise_amount(amount)
+      |> TableState.update_raise_amount(amount - state.highest_raise)
       |> TableState.reset_has_acted()
       |> advance_player_turn(:raise)
     end
@@ -155,17 +155,19 @@ defmodule PokerMind.Engine.Actions do
     cond do
       player.current_bet == amount ->
         {:error,
-         {:already_performed_raise,
-          "Current_bet = new raise amount - did we already perform this bet?"}}
+         {:current_bet_matches_raise,
+          "Invalid raise, the amount provided #{amount} is equal to your current bet"}}
 
-      amount < 2 * state.big_blind_amount ->
-        {:error, {:invalid_raise, "Not a valid raise - assume bet size too small"}}
+      amount - state.highest_raise < state.raise_amount ->
+        {:error,
+         {:invalid_raise,
+          "Invalid raise, you raised to #{amount}, but the current minimum viable raise is #{state.highest_raise + state.raise_amount}"}}
 
-      amount >= 2 * state.big_blind_amount ->
+      amount - state.highest_raise >= state.raise_amount ->
         :ok
 
       true ->
-        {:error, {:invalid_action, "Not a valid action"}}
+        {:error, {:invalid_action, "Invalid action"}}
     end
   end
 
