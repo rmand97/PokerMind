@@ -12,6 +12,7 @@ defmodule PokerMind.Engine.Actions do
       state
       |> TableState.add_to_pot(player_id, amount)
       |> TableState.update_highest_raise(amount)
+      |> TableState.update_raise_amount(amount)
       |> TableState.reset_has_acted()
       |> advance_player_turn(:raise)
     end
