@@ -108,58 +108,56 @@ defmodule PokerMind.Engine.IntegrationTest do
     end
   end
 
-  describe "Helper functions" do
-    defp raise_(state, player_id, amount) do
-      Actions.apply_action(state, %{type: :raise, player_id: player_id, amount: amount})
-    end
+  defp raise_(state, player_id, amount) do
+    Actions.apply_action(state, %{type: :raise, player_id: player_id, amount: amount})
+  end
 
-    defp call(state, player_id, amount) do
-      Actions.apply_action(state, %{type: :call, player_id: player_id, amount: amount})
-    end
+  defp call(state, player_id, amount) do
+    Actions.apply_action(state, %{type: :call, player_id: player_id, amount: amount})
+  end
 
-    defp check(state, player_id) do
-      Actions.apply_action(state, %{type: :check, player_id: player_id})
-    end
+  defp check(state, player_id) do
+    Actions.apply_action(state, %{type: :check, player_id: player_id})
+  end
 
-    defp all_in(state, player_id) do
-      Actions.apply_action(state, %{type: :all_in, player_id: player_id})
-    end
+  defp all_in(state, player_id) do
+    Actions.apply_action(state, %{type: :all_in, player_id: player_id})
+  end
 
-    defp withdraw_cards_from_deck(state, cards) do
-      Map.update!(state, :deck, fn deck ->
-        Enum.reject(deck, fn card ->
-          Enum.any?(cards, fn {rank, suit} ->
-            card.rank == rank and card.suit == suit
-          end)
+  defp withdraw_cards_from_deck(state, cards) do
+    Map.update!(state, :deck, fn deck ->
+      Enum.reject(deck, fn card ->
+        Enum.any?(cards, fn {rank, suit} ->
+          card.rank == rank and card.suit == suit
         end)
       end)
-    end
+    end)
+  end
 
-    defp set_player_hand(state, player_id, cards)
-         when is_binary(player_id) and is_list(cards) do
-      player = TableState.get_player(state, player_id)
-      current_cards = player.current_hand
+  defp set_player_hand(state, player_id, cards)
+       when is_binary(player_id) and is_list(cards) do
+    player = TableState.get_player(state, player_id)
+    current_cards = player.current_hand
 
-      state
-      |> Map.put(:deck, state.deck ++ current_cards)
-      |> withdraw_cards_from_deck(cards)
-      |> then(fn state ->
-        mapped_cards = Enum.map(cards, fn {rank, suit} -> %{rank: rank, suit: suit} end)
-        TableState.set_player_value(state, player_id, :current_hand, mapped_cards)
-      end)
-    end
+    state
+    |> Map.put(:deck, state.deck ++ current_cards)
+    |> withdraw_cards_from_deck(cards)
+    |> then(fn state ->
+      mapped_cards = Enum.map(cards, fn {rank, suit} -> %{rank: rank, suit: suit} end)
+      TableState.set_player_value(state, player_id, :current_hand, mapped_cards)
+    end)
+  end
 
-    defp set_community_cards(state, cards)
-         when is_list(cards) do
-      current_cards = state.community_cards
+  defp set_community_cards(state, cards)
+       when is_list(cards) do
+    current_cards = state.community_cards
 
-      state
-      |> Map.put(:deck, state.deck ++ current_cards)
-      |> withdraw_cards_from_deck(cards)
-      |> then(fn state ->
-        mapped_cards = Enum.map(cards, fn {rank, suit} -> %{rank: rank, suit: suit} end)
-        Map.put(state, :community_cards, mapped_cards)
-      end)
-    end
+    state
+    |> Map.put(:deck, state.deck ++ current_cards)
+    |> withdraw_cards_from_deck(cards)
+    |> then(fn state ->
+      mapped_cards = Enum.map(cards, fn {rank, suit} -> %{rank: rank, suit: suit} end)
+      Map.put(state, :community_cards, mapped_cards)
+    end)
   end
 end
