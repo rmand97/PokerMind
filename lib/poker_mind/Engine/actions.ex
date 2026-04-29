@@ -177,17 +177,17 @@ defmodule PokerMind.Engine.Actions do
     if TableState.round_complete?(updated_state) do
       next_phase = TableState.next_phase(state)
 
-      advanced =
+      advanced_state =
         state
         |> TableState.reset_has_acted()
         |> TableState.reset_current_bet()
         |> TableState.reset_highest_raise()
         |> TableState.advance_phase(next_phase)
 
-      if advanced.phase in [:flop, :turn, :river] do
-        TableState.set_current_player_for_phase(advanced)
+      if advanced_state.phase in [:flop, :turn, :river] do
+        TableState.set_current_player_for_phase(advanced_state)
       else
-        advanced
+        advanced_state
       end
     else
       next_player_id =

@@ -765,8 +765,7 @@ defmodule PokerMind.Engine.ActionsTest do
     # set_current_player_for_phase/1 after every phase advance, even when the
     # advance landed on :showdown / :hand_finished / :game_finished — phases
     # where no player can act. With zero :active_in_hand players the fallback
-    # in set_current_player_for_phase/1 returned nil and crashed with
-    # BadMapError on nil.id.
+    # in set_current_player_for_phase/1 returned nil and crashed.
     test "3-player starting_player fold, small_blind all-in, big_blind folds and state reaches showdown without crashing" do
       # Shrunk action sequence from tablestate_property_test seed 353104:
       # starting_player folds; small_blind goes over-the-top all-in (re-opens betting, resets
@@ -790,16 +789,17 @@ defmodule PokerMind.Engine.ActionsTest do
       big_blind = after_small_blind_all_in.current_player_id
       assert big_blind != small_blind and big_blind != starting_player
 
-      final = Actions.apply_action(after_small_blind_all_in, %{type: :fold, player_id: big_blind})
+      final_state =
+        Actions.apply_action(after_small_blind_all_in, %{type: :fold, player_id: big_blind})
 
       # No crash. Phase resolved to :showdown and the pot was refunded to small_blind
       # (the only player still in the hand). small_blind started with 10_000, paid 50
       # in blinds, went all-in for 10_000, and is refunded the full 10_100
       # pot — netting big_blind's 100 forfeit.
-      assert final.phase == :showdown
-      assert final.pot == 0
-      assert TableState.get_player(final, small_blind).remaining_chips == 10_100
-      assert TableState.get_player(final, small_blind).state == :all_in
+      assert final_state.phase == :showdown
+      assert final_state.pot == 0
+      assert TableState.get_player(final_state, small_blind).remaining_chips == 10_100
+      assert TableState.get_player(final_state, small_blind).state == :all_in
     end
 
     test "completing a hand starts the next hand with a valid current_player",
