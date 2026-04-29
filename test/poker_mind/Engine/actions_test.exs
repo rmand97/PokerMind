@@ -542,19 +542,19 @@ defmodule PokerMind.Engine.ActionsTest do
 
       # raise with amount more than players entire stack
       assert {:error, {:not_enough_chips, _}} =
-        Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               amount: 3 * player_remaining_chips
-             })
+               Actions.apply_action(init_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 amount: 3 * player_remaining_chips
+               })
 
       # raise amount equal to player stack
       assert {:error, {:use_all_in_action, _}} =
-      Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               amount: player_remaining_chips
-             })
+               Actions.apply_action(init_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 amount: player_remaining_chips
+               })
     end
 
     test "validate_amount/3 - remaining_chips and current_bet are both included in amount", %{
@@ -571,20 +571,20 @@ defmodule PokerMind.Engine.ActionsTest do
       # Raising with 1500 is valid even though remaining chips for starting player is 1000
       # as it already has 1000 chips as current bet
       assert %TableState{} =
-        Actions.apply_action(updated_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               amount: 1500
-             })
+               Actions.apply_action(updated_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 amount: 1500
+               })
 
       # Calling with 2000 is valid even though remaining chips for starting player is 1000
       # as it already has 1000 chips as current bet. Error is do to the player going all_in.
       assert {:error, {:use_all_in_action, _}} =
-        Actions.apply_action(updated_state, %{
-               type: :call,
-               player_id: starting_player_id,
-               amount: updated_state.highest_raise
-             })
+               Actions.apply_action(updated_state, %{
+                 type: :call,
+                 player_id: starting_player_id,
+                 amount: updated_state.highest_raise
+               })
     end
 
     test "Test of validate_raise helper function", %{state: init_state} do
@@ -593,12 +593,12 @@ defmodule PokerMind.Engine.ActionsTest do
       # test error catching in validate_raise
       # raise amount too low
       assert {:error, {:invalid_raise, _}} =
-      Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               # assumes big blind is 100
-               amount: Integer.floor_div(init_state.big_blind_amount, 2)
-             })
+               Actions.apply_action(init_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 # assumes big blind is 100
+                 amount: Integer.floor_div(init_state.big_blind_amount, 2)
+               })
 
       # set current bet equal to highest raise to test error catching in validate_raise for raise amount equal to current bet
       init_state =
@@ -610,11 +610,11 @@ defmodule PokerMind.Engine.ActionsTest do
 
       # raise amount equal to current bet
       assert {:error, {:already_performed_raise, _}} =
-        Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               amount: 2 * init_state.big_blind_amount
-             })
+               Actions.apply_action(init_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 amount: 2 * init_state.big_blind_amount
+               })
 
       assert %TableState{} =
                Actions.apply_action(init_state, %{
