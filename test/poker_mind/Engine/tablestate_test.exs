@@ -137,6 +137,9 @@ defmodule PokerMind.Engine.TableStateTest do
           # big blind amount stays the same for the first 9 hands
           assert after_hand_finished.hands_played == i
           assert after_hand_finished.big_blind_amount == state.big_blind_amount
+          # The same for highest_raise and raise_amount
+          assert after_hand_finished.highest_raise == state.highest_raise
+          assert after_hand_finished.raise_amount == state.raise_amount
           after_hand_finished
         end)
 
@@ -147,6 +150,9 @@ defmodule PokerMind.Engine.TableStateTest do
       # big_blind doubles when 10 hands has been played
       assert final_state.phase == :pre_flop
       assert final_state.big_blind_amount == state.big_blind_amount * 2
+      # The same for highest_raise and raise_amount
+      assert final_state.highest_raise == state.highest_raise * 2
+      assert final_state.raise_amount == state.raise_amount * 2
     end
   end
 
