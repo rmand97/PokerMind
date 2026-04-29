@@ -255,7 +255,7 @@ defmodule PokerMind.Engine.TableStateTest do
         "simon"
       ]
 
-      final_state =
+      new_hand_state =
         Enum.reduce(players, state, fn name, current_state ->
           current_state
           |> TableState.set_player_value(name, :state, :inactive_in_hand)
@@ -266,7 +266,7 @@ defmodule PokerMind.Engine.TableStateTest do
         |> TableState.advance_phase(:showdown)
 
       # Showdown leaves stine with 200 chips and rest with 50
-      for {player, updated_player} <- Enum.zip(state.players, final_state.players) do
+      for {player, updated_player} <- Enum.zip(state.players, new_hand_state.players) do
         # Make sure we compare the same player
         assert player.id == updated_player.id
         # Current hand has been updated for each player
@@ -288,10 +288,10 @@ defmodule PokerMind.Engine.TableStateTest do
       end
 
       # No winner found yet
-      assert final_state.winner == nil
+      assert new_hand_state.winner == nil
       # New small blind is selected and we start the new hand
-      assert state.small_blind_id != final_state.small_blind_id
-      assert final_state.phase == :pre_flop
+      assert state.small_blind_id != new_hand_state.small_blind_id
+      assert new_hand_state.phase == :pre_flop
     end
 
     test "advance_phase/2 - an overall winner has been found for the table",
@@ -305,7 +305,7 @@ defmodule PokerMind.Engine.TableStateTest do
         "simon"
       ]
 
-      new_state =
+      winner_state =
         Enum.reduce(players, state, fn name, current_state ->
           current_state
           |> TableState.set_player_value(name, :state, :out_of_chips)
@@ -318,8 +318,8 @@ defmodule PokerMind.Engine.TableStateTest do
 
       # Showdown leaves stine with 100 chips and rest with 0
       # stine is the winner of the table
-      assert new_state.winner == "stine"
-      assert new_state.phase == :game_finished
+      assert winner_state.winner == "stine"
+      assert winner_state.phase == :game_finished
     end
   end
 
