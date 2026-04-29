@@ -177,8 +177,10 @@ defmodule PokerMind.Engine.Actions do
       |> TableState.advance_phase(next_phase)
       |> TableState.set_current_player_for_phase()
     else
-      next_player = TableState.find_next_active_player(updated_state, state.current_player_id)
-      %{updated_state | current_player_id: next_player.id}
+      next_player_id =
+        TableState.find_next_active_player_id(updated_state, state.current_player_id)
+
+      %{updated_state | current_player_id: next_player_id}
     end
   end
 end
