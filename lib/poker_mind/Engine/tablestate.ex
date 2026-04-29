@@ -23,6 +23,7 @@ defmodule PokerMind.Engine.TableState do
     # bet to match
     :highest_raise,
     :big_blind_amount,
+    :raise_amount,
     :winner,
     :hands_played
   ]
@@ -93,6 +94,7 @@ defmodule PokerMind.Engine.TableState do
     new_state
     |> Map.put(:highest_raise, big_blind)
     |> Map.put(:big_blind_amount, big_blind)
+    |> Map.put(:raise_amount, big_blind)
     |> add_to_pot(new_state.small_blind_id, div(big_blind, 2))
     |> advance_player(:current_player_id, new_state.small_blind_id)
     |> then(fn state ->
@@ -372,6 +374,11 @@ defmodule PokerMind.Engine.TableState do
   def update_highest_raise(%__MODULE__{} = state, amount)
       when is_integer(amount) and amount > 0 do
     Map.put(state, :highest_raise, amount)
+  end
+
+  def update_raise_amount(%__MODULE__{} = state, amount)
+      when is_integer(amount) and amount > 0 do
+    Map.put(state, :raise_amount, amount)
   end
 
   def reset_highest_raise(%__MODULE__{} = state) do
