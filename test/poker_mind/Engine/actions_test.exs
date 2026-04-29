@@ -792,21 +792,25 @@ defmodule PokerMind.Engine.ActionsTest do
       final_state =
         Actions.apply_action(after_small_blind_all_in, %{type: :fold, player_id: big_blind})
 
-      # No crash. Phase resolved to :showdown and the pot was refunded to small_blind
-      # (the only player still in the hand). small_blind started with 10_000, paid 50
-      # in blinds, went all-in for 10_000, and is refunded the full 10_100
-      # pot — netting big_blind's 100 forfeit.
-      assert final_state.phase == :showdown
-      assert final_state.pot == 0
+      # No crash. Showdown refunded the uncontested pot to small_blind, then
+      # advance_phase cascaded into a fresh hand via possible_new_hand/1.
+      # small_blind started with 10_000, paid 50 in blinds, went all-in for
+      # 10_000, and was refunded the full 10_100 pot — netting big_blind's 100
+      # forfeit. In a 3-player rotation old SB becomes first-to-act in the new
+      # hand and pays no new blind, so they keep the full 10_100.
+      assert final_state.phase == :pre_flop
       assert TableState.get_player(final_state, small_blind).remaining_chips == 10_100
-      assert TableState.get_player(final_state, small_blind).state == :all_in
+      assert TableState.get_player(final_state, small_blind).state == :active_in_hand
+      assert final_state.current_player_id == small_blind
     end
 
     test "completing a hand starts the next hand with a valid current_player",
          %{state: init_state} do
-      # The fix excludes :pre_flop from set_current_player_for_phase because
-      # possible_new_hand/1 already sets current_player_id via set_blinds(false).
-      # Verify the next hand still has a valid actor and accepts an action.
+      # advance_phase(:showdown) cascades through :hand_finished into the next
+      # hand's :pre_flop. Verify possible_new_hand/1 sets current_player_id
+      # (via set_blinds(false)) so the new hand has a valid actor that can
+      # accept an action — set_current_player_for_phase is intentionally not
+      # called for :pre_flop in advance_player_turn.
       others = Enum.reject(init_state.players, &(&1.id == init_state.small_blind_id))
 
       with_only_small_blind_active =
@@ -814,8 +818,7 @@ defmodule PokerMind.Engine.ActionsTest do
           TableState.set_player_value(acc, player.id, :state, :inactive_in_hand)
         end)
 
-      after_showdown = TableState.advance_phase(with_only_small_blind_active, :showdown)
-      next_hand = TableState.advance_phase(after_showdown, :hand_finished)
+      next_hand = TableState.advance_phase(with_only_small_blind_active, :showdown)
 
       assert next_hand.phase == :pre_flop
       assert next_hand.winner == nil
