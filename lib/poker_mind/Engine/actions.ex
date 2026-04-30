@@ -31,7 +31,7 @@ defmodule PokerMind.Engine.Actions do
   def apply_action(%TableState{} = state, %{type: :call, player_id: player_id, amount: amount})
       when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id),
-         :ok <- validate_call(state, amount),
+         :ok <- validate_call(state, player_id, amount),
          :ok <- validate_amount(state, player_id, amount) do
       state
       |> TableState.add_to_pot(player_id, amount)
@@ -141,12 +141,22 @@ defmodule PokerMind.Engine.Actions do
     end
   end
 
-  defp validate_call(%TableState{highest_raise: highest_raise}, amount) when is_integer(amount) do
-    if amount == highest_raise do
-      :ok
-    else
-      {:error,
-       {:invalid_call_amount, "Call amount #{amount} must match highest raise #{highest_raise}"}}
+  defp validate_call(%TableState{highest_raise: highest_raise} = state, player_id, amount)
+       when is_binary(player_id) and is_integer(amount) do
+    player = TableState.get_player(state, player_id)
+
+    cond do
+      amount != highest_raise ->
+        {:error,
+         {:invalid_call_amount, "Call amount #{amount} must match highest raise #{highest_raise}"}}
+
+      amount == player.current_bet ->
+        {:error,
+         {:use_check_action,
+          "No chips to call (current bet #{player.current_bet} already matches highest raise #{highest_raise}) - use the check action type"}}
+
+      true ->
+        :ok
     end
   end
 
