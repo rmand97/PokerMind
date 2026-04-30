@@ -233,7 +233,6 @@ defmodule PokerMind.Engine.IntegrationTest do
         |> set_player_hand(player2_id, [{11, :clubs}, {2, :hearts}])
         |> set_community_cards(community_cards_hand_6)
         |> check(player1_id)
-        |> dbg()
 
       # Game has ended, P1 wins
       assert gameplay.phase == :game_finished
