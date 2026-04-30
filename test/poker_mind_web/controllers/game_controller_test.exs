@@ -111,7 +111,7 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     end)
 
     conn = get(conn, "/api/suites")
-    assert %{"data" => suites} = json_response(conn, 200)
+    assert suites = json_response(conn, 200)
     assert suites[suite1_id] == players1
     assert suites[suite2_id] == players2
   end

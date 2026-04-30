@@ -24,7 +24,7 @@ defmodule PokerMindWeb.GameController do
   )
 
   def suites(conn, _params) do
-    json(conn, %{data: MatchSupervisor.all_match_suites()})
+    json(conn, MatchSupervisor.all_match_suites())
   end
 
   operation(:start_suite,
