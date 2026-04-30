@@ -80,6 +80,7 @@ defmodule PokerMind.Engine.Actions do
     if all_in_amount > state.highest_raise do
       state
       |> TableState.update_highest_raise(all_in_amount)
+      |> TableState.update_raise_amount(all_in_amount - state.highest_raise)
       |> TableState.reset_has_acted()
     else
       state
@@ -165,9 +166,6 @@ defmodule PokerMind.Engine.Actions do
 
       amount - state.highest_raise >= state.raise_amount ->
         :ok
-
-      true ->
-        {:error, {:invalid_action, "Invalid action"}}
     end
   end
 
@@ -182,6 +180,7 @@ defmodule PokerMind.Engine.Actions do
         |> TableState.reset_has_acted()
         |> TableState.reset_current_bet()
         |> TableState.reset_highest_raise()
+        |> TableState.reset_raise_amount()
         |> TableState.advance_phase(next_phase)
 
       if advanced_state.phase in [:flop, :turn, :river] do
