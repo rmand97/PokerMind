@@ -5,7 +5,7 @@ defmodule PokerMind.Engine.Actions do
     {:error, {:game_is_finished, "Game is finished, no more actions can be performed"}}
   end
 
-  def apply_action(%TableState{} = state, %{type: :raise, player_id: player_id, amount: amount}) do
+  def apply_action(%TableState{} = state, %{action: :raise, player_id: player_id, amount: amount}) do
     with :ok <- validate_turn(state, player_id),
          :ok <- validate_amount(state, player_id, amount),
          :ok <- validate_raise(state, player_id, amount) do
@@ -18,7 +18,7 @@ defmodule PokerMind.Engine.Actions do
     end
   end
 
-  def apply_action(%TableState{} = state, %{type: :fold, player_id: player_id})
+  def apply_action(%TableState{} = state, %{action: :fold, player_id: player_id})
       when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id),
          :ok <- validate_fold(state, player_id) do
@@ -28,7 +28,7 @@ defmodule PokerMind.Engine.Actions do
     end
   end
 
-  def apply_action(%TableState{} = state, %{type: :call, player_id: player_id, amount: amount})
+  def apply_action(%TableState{} = state, %{action: :call, player_id: player_id, amount: amount})
       when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id),
          :ok <- validate_call(state, amount),
@@ -39,7 +39,7 @@ defmodule PokerMind.Engine.Actions do
     end
   end
 
-  def apply_action(%TableState{} = state, %{type: :check, player_id: player_id})
+  def apply_action(%TableState{} = state, %{action: :check, player_id: player_id})
       when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id) do
       player = Enum.find(state.players, &(&1.id == player_id))
@@ -55,7 +55,7 @@ defmodule PokerMind.Engine.Actions do
     end
   end
 
-  def apply_action(%TableState{} = state, %{type: :all_in, player_id: player_id})
+  def apply_action(%TableState{} = state, %{action: :all_in, player_id: player_id})
       when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id) do
       %{remaining_chips: chips, current_bet: bet} = TableState.get_player(state, player_id)
