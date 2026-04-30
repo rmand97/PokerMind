@@ -16,11 +16,13 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
 
     # "stine" gets 10 games
     conn = get(conn, "/api/next_games", %{"player_id" => "rolf", "suite_id" => suite_id})
+
     assert %{
-          "all_games_finished" => all_games_finished,
-          "games" => games,
-          "overall_winners" => overall_winners
-        } = json_response(conn, 200)
+             "all_games_finished" => all_games_finished,
+             "games" => games,
+             "overall_winners" => overall_winners
+           } = json_response(conn, 200)
+
     assert all_games_finished == false
     assert overall_winners == nil
     assert length(games) == 10
@@ -197,10 +199,12 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     players = ["stine"]
 
     {:ok, _pid, suite_id} = MatchSupport.start_match_suite!(suite_id, players, num_games)
+
     Enum.each(1..10, fn i ->
       game_id = Game.id(suite_id, i)
       :ok = Coordinator.register_game_finished(coordinator_id, game_id, "stine")
     end)
+
     on_exit(fn -> MatchSupervisor.close_match_suite(suite_id) end)
 
     json =
