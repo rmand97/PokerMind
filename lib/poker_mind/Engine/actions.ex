@@ -12,6 +12,8 @@ defmodule PokerMind.Engine.Actions do
       state
       |> TableState.add_to_pot(player_id, amount)
       |> TableState.update_highest_raise(amount)
+      |> TableState.update_raise_amount(amount - state.highest_raise)
+      |> TableState.reset_has_acted()
       |> advance_player_turn(:raise)
     end
   end
@@ -78,6 +80,7 @@ defmodule PokerMind.Engine.Actions do
     if all_in_amount > state.highest_raise do
       state
       |> TableState.update_highest_raise(all_in_amount)
+      |> TableState.update_raise_amount(all_in_amount - state.highest_raise)
       |> TableState.reset_has_acted()
     else
       state
@@ -109,16 +112,41 @@ defmodule PokerMind.Engine.Actions do
     player = TableState.get_player(state, player_id)
 
     cond do
-      amount < player.remaining_chips and amount > 0 ->
+      amount < player.remaining_chips + player.current_bet and amount > 0 ->
         :ok
 
-      amount == player.remaining_chips ->
+      amount == player.remaining_chips + player.current_bet ->
         {:error,
-         "Action requires all remaining chips - if you want to go all in use the all_in action type"}
+         {:use_all_in_action,
+          "Action requires all remaining chips - if you want to go all in use the all_in action type"}}
 
       true ->
         {:error,
-         "Action requires more chips than player has remaining - if you want to go all in use the all_in action type"}
+         {:not_enough_chips,
+          "Action requires more chips than player has remaining - if you want to go all in use the all_in action type"}}
+    end
+  end
+
+  defp validate_fold(%TableState{players: players}, player_id) do
+    other_players_still_active? =
+      Enum.any?(players, fn p ->
+        p.id != player_id and p.state in [:active_in_hand, :all_in]
+      end)
+
+    if other_players_still_active? do
+      :ok
+    else
+      {:error,
+       {:cannot_fold_last_player, "Cannot fold when no other players are still in the hand"}}
+    end
+  end
+
+  defp validate_call(%TableState{highest_raise: highest_raise}, amount) when is_integer(amount) do
+    if amount == highest_raise do
+      :ok
+    else
+      {:error,
+       {:invalid_call_amount, "Call amount #{amount} must match highest raise #{highest_raise}"}}
     end
   end
 
@@ -150,16 +178,17 @@ defmodule PokerMind.Engine.Actions do
 
     cond do
       player.current_bet == amount ->
-        {:error, "Current_bet = new raise amount - did we already perform this bet?"}
+        {:error,
+         {:current_bet_matches_raise,
+          "Invalid raise, the amount provided #{amount} is equal to your current bet"}}
 
-      amount < 2 * state.highest_raise ->
-        {:error, "Not a valid raise - assume bet size too small"}
+      amount - state.highest_raise < state.raise_amount ->
+        {:error,
+         {:invalid_raise,
+          "Invalid raise, you raised to #{amount}, but the current minimum viable raise is #{state.highest_raise + state.raise_amount}"}}
 
-      amount >= 2 * state.highest_raise ->
+      amount - state.highest_raise >= state.raise_amount ->
         :ok
-
-      true ->
-        {:error, "Not a valid action"}
     end
   end
 
@@ -169,15 +198,24 @@ defmodule PokerMind.Engine.Actions do
     if TableState.round_complete?(updated_state) do
       next_phase = TableState.next_phase(state)
 
-      state
-      |> TableState.reset_has_acted()
-      |> TableState.reset_current_bet()
-      |> TableState.reset_highest_raise()
-      |> TableState.advance_phase(next_phase)
-      |> TableState.set_current_player_for_phase()
+      advanced_state =
+        state
+        |> TableState.reset_has_acted()
+        |> TableState.reset_current_bet()
+        |> TableState.reset_highest_raise()
+        |> TableState.reset_raise_amount()
+        |> TableState.advance_phase(next_phase)
+
+      if advanced_state.phase in [:flop, :turn, :river] do
+        TableState.set_current_player_for_phase(advanced_state)
+      else
+        advanced_state
+      end
     else
-      next_player = TableState.find_next_active_player(updated_state, state.current_player_id)
-      %{updated_state | current_player_id: next_player.id}
+      next_player_id =
+        TableState.find_next_active_player_id(updated_state, state.current_player_id)
+
+      %{updated_state | current_player_id: next_player_id}
     end
   end
 end

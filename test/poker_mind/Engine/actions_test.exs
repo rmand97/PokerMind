@@ -541,24 +541,56 @@ defmodule PokerMind.Engine.ActionsTest do
         TableState.get_player(init_state, starting_player_id).remaining_chips
 
       # raise with amount more than players entire stack
-      assert Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               amount: 3 * player_remaining_chips
-             }) ==
-               {:error,
-                "Action requires more chips than player has remaining - if you want to go all in use the all_in action type"}
+      assert {:error, {:not_enough_chips, _}} =
+               Actions.apply_action(init_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 amount: 3 * player_remaining_chips
+               })
 
       # raise amount equal to player stack
-      assert Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               amount: player_remaining_chips
-             }) ==
-               {:error,
-                "Action requires all remaining chips - if you want to go all in use the all_in action type"}
+      assert {:error, {:use_all_in_action, _}} =
+               Actions.apply_action(init_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 amount: player_remaining_chips
+               })
+    end
 
-      # test call
+    test "validate_amount/3 - remaining_chips and current_bet are both included in amount", %{
+      state: init_state
+    } do
+      starting_player_id = init_state.current_player_id
+
+      raise_state =
+        init_state
+        |> TableState.set_player_value(starting_player_id, :current_bet, 2000)
+        |> TableState.set_player_value(starting_player_id, :remaining_chips, 1000)
+        |> Map.put(:highest_raise, 2000)
+
+      # Raising with 2500 is valid even though remaining chips for starting player is 1000
+      # as it already has 2000 chips as current bet
+      assert %TableState{} =
+               Actions.apply_action(raise_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 amount: 2500
+               })
+
+      call_state =
+        init_state
+        |> TableState.set_player_value(starting_player_id, :current_bet, 1000)
+        |> TableState.set_player_value(starting_player_id, :remaining_chips, 1000)
+        |> Map.put(:highest_raise, 2000)
+
+      # Calling with 2000 is valid for amount even though remaining chips for starting player is 1000
+      # as it already has 1000 chips as current bet. Error is due to the player going all_in.
+      assert {:error, {:use_all_in_action, _}} =
+               Actions.apply_action(call_state, %{
+                 type: :call,
+                 player_id: starting_player_id,
+                 amount: call_state.highest_raise
+               })
     end
 
     test "Test of validate_raise helper function", %{state: init_state} do
@@ -566,12 +598,13 @@ defmodule PokerMind.Engine.ActionsTest do
 
       # test error catching in validate_raise
       # raise amount too low
-      assert Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               # assumes big blind is 100
-               amount: Integer.floor_div(init_state.big_blind_amount, 2)
-             }) == {:error, "Not a valid raise - assume bet size too small"}
+      assert {:error, {:invalid_raise, _}} =
+               Actions.apply_action(init_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 # assumes big blind is 100
+                 amount: Integer.floor_div(init_state.big_blind_amount, 2)
+               })
 
       # set current bet equal to highest raise to test error catching in validate_raise for raise amount equal to current bet
       init_state =
@@ -582,11 +615,12 @@ defmodule PokerMind.Engine.ActionsTest do
         )
 
       # raise amount equal to current bet
-      assert Actions.apply_action(init_state, %{
-               type: :raise,
-               player_id: starting_player_id,
-               amount: 2 * init_state.big_blind_amount
-             }) == {:error, "Current_bet = new raise amount - did we already perform this bet?"}
+      assert {:error, {:current_bet_matches_raise, _}} =
+               Actions.apply_action(init_state, %{
+                 type: :raise,
+                 player_id: starting_player_id,
+                 amount: 2 * init_state.big_blind_amount
+               })
 
       assert %TableState{} =
                Actions.apply_action(init_state, %{
@@ -685,6 +719,80 @@ defmodule PokerMind.Engine.ActionsTest do
                final.players,
                &(&1.total_contributed == 2 * init_state.big_blind_amount)
              )
+    end
+
+    # Regression: previously advance_player_turn/2 unconditionally called
+    # set_current_player_for_phase/1 after every phase advance, even when the
+    # advance landed on :showdown / :hand_finished / :game_finished — phases
+    # where no player can act. With zero :active_in_hand players the fallback
+    # in set_current_player_for_phase/1 returned nil and crashed.
+    test "3-player starting_player fold, small_blind all-in, big_blind folds and state reaches showdown without crashing" do
+      # Shrunk action sequence from tablestate_property_test seed 353104:
+      # starting_player folds; small_blind goes over-the-top all-in (re-opens betting, resets
+      # has_acted across the table); big_blind folds — leaving zero :active_in_hand
+      # players. round_complete? is vacuously true, next_phase is :showdown,
+      # and the pot is uncontested → small_blind is refunded.
+      init_state =
+        TableState.init(TableState.new(UUID.uuid4()), ["asbjørn", "stine", "rolf"])
+
+      starting_player = init_state.current_player_id
+      small_blind = init_state.small_blind_id
+
+      after_starting_player_fold =
+        Actions.apply_action(init_state, %{type: :fold, player_id: starting_player})
+
+      assert after_starting_player_fold.current_player_id == small_blind
+
+      after_small_blind_all_in =
+        Actions.apply_action(after_starting_player_fold, %{type: :all_in, player_id: small_blind})
+
+      big_blind = after_small_blind_all_in.current_player_id
+      assert big_blind != small_blind and big_blind != starting_player
+
+      final_state =
+        Actions.apply_action(after_small_blind_all_in, %{type: :fold, player_id: big_blind})
+
+      # No crash. Showdown refunded the uncontested pot to small_blind, then
+      # advance_phase cascaded into a fresh hand via possible_new_hand/1.
+      # small_blind started with 10_000, paid 50 in blinds, went all-in for
+      # 10_000, and was refunded the full 10_100 pot — netting big_blind's 100
+      # forfeit. In a 3-player rotation old SB becomes first-to-act in the new
+      # hand and pays no new blind, so they keep the full 10_100.
+      assert final_state.phase == :pre_flop
+      assert TableState.get_player(final_state, small_blind).remaining_chips == 10_100
+      assert TableState.get_player(final_state, small_blind).state == :active_in_hand
+      assert final_state.current_player_id == small_blind
+    end
+
+    test "completing a hand starts the next hand with a valid current_player",
+         %{state: init_state} do
+      # advance_phase(:showdown) cascades through :hand_finished into the next
+      # hand's :pre_flop. Verify possible_new_hand/1 sets current_player_id
+      # (via set_blinds(false)) so the new hand has a valid actor that can
+      # accept an action — set_current_player_for_phase is intentionally not
+      # called for :pre_flop in advance_player_turn.
+      others = Enum.reject(init_state.players, &(&1.id == init_state.small_blind_id))
+
+      with_only_small_blind_active =
+        Enum.reduce(others, init_state, fn player, acc ->
+          TableState.set_player_value(acc, player.id, :state, :inactive_in_hand)
+        end)
+
+      next_hand = TableState.advance_phase(with_only_small_blind_active, :showdown)
+
+      assert next_hand.phase == :pre_flop
+      assert next_hand.winner == nil
+      assert next_hand.current_player_id != nil
+
+      current = TableState.get_player(next_hand, next_hand.current_player_id)
+      assert current.state == :active_in_hand
+
+      # And the engine accepts an action from the new current player.
+      result =
+        Actions.apply_action(next_hand, %{type: :fold, player_id: next_hand.current_player_id})
+
+      refute match?({:error, _}, result)
+      assert TableState.get_player(result, next_hand.current_player_id).state == :inactive_in_hand
     end
   end
 end

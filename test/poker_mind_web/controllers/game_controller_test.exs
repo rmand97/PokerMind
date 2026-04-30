@@ -4,6 +4,7 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
   alias PokerMind.Engine.Match.Game
   alias PokerMindWeb.MatchSupport
   alias PokerMind.Engine.Match.Supervisor, as: MatchSupervisor
+  alias PokerMind.Engine.Match.Coordinator
 
   test "GET /api/next_games with player_id and suite_id", %{conn: conn} do
     suite_id = UUID.uuid4()
@@ -127,6 +128,45 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
            }
   end
 
+  test "POST /api/start_suite starts a new suite with given number of games", %{conn: conn} do
+    num_games = 3
+    players = ["rolf", "stine"]
+
+    json =
+      conn
+      |> post("/api/start_suite", %{
+        "players" => players,
+        "num_games" => num_games
+      })
+      |> json_response(200)
+
+    suite_id = json["suite_id"]
+    on_exit(fn -> MatchSupervisor.close_match_suite(suite_id) end)
+
+    assert %{^suite_id => actual_players} = MatchSupervisor.all_match_suites()
+    assert players == actual_players
+
+    coordinator_id = Coordinator.id(suite_id)
+    assert %{players: ^players, games: games} = Coordinator.get_state(coordinator_id)
+    assert length(Map.keys(games)) == num_games
+  end
+
+  test "GameController suites produces a SuitesResponse", %{conn: conn} do
+    suite1_id = UUID.uuid4()
+    players1 = ["rolf", "stine"]
+
+    {:ok, _pid, ^suite1_id} = MatchSupport.start_match_suite!(suite1_id, players1)
+
+    on_exit(fn ->
+      MatchSupervisor.close_match_suite(suite1_id)
+    end)
+
+    json = get(conn, "/api/suites") |> json_response(200)
+
+    api_spec = PokerMindWeb.ApiSpec.spec()
+    assert_schema(json, "SuitesResponse", api_spec)
+  end
+
   test "GameController next_games produces a GameResponse", %{conn: conn} do
     suite_id = UUID.uuid4()
     num_games = 10
@@ -164,5 +204,23 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
 
     api_spec = PokerMindWeb.ApiSpec.spec()
     assert_schema(json, "Game", api_spec)
+  end
+
+  test "GameController start_suite produces a Start Suite Response", %{conn: conn} do
+    num_games = 5
+
+    json =
+      conn
+      |> post("/api/start_suite", %{
+        "players" => ["rolf", "stine"],
+        "num_games" => num_games
+      })
+      |> json_response(200)
+
+    suite_id = json["suite_id"]
+    on_exit(fn -> MatchSupervisor.close_match_suite(suite_id) end)
+
+    api_spec = PokerMindWeb.ApiSpec.spec()
+    assert_schema(json, "Start Suite Response", api_spec)
   end
 end
