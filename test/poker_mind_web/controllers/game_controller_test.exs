@@ -159,6 +159,31 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     assert length(Map.keys(games)) == num_games
   end
 
+  test "DELETE /api/close_suite closes an existing suite", %{conn: conn} do
+    num_games = 3
+    players = ["rolf", "stine"]
+
+    # Start suite
+    json =
+      conn
+      |> post("/api/start_suite", %{
+        "players" => players,
+        "num_games" => num_games
+      })
+      |> json_response(200)
+
+    # Close suite
+    suite_id = json["suite_id"]
+
+    conn
+    |> delete("/api/close_suite", %{
+      "id" => suite_id
+    })
+    |> json_response(200)
+
+    assert %{} = MatchSupervisor.all_match_suites()
+  end
+
   test "GameController suites produces a SuitesResponse", %{conn: conn} do
     suite1_id = UUID.uuid4()
     players1 = ["rolf", "stine"]
