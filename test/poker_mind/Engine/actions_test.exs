@@ -300,6 +300,39 @@ defmodule PokerMind.Engine.ActionsTest do
                  amount: 3 * init_state.highest_raise
                })
     end
+
+    test "call rejected when player's current_bet already matches highest_raise (use :check)",
+         %{state: init_state} do
+      # Big blind has already posted big_blind_amount and so current_bet == highest_raise.
+      # A :call at that amount would move 0 chips — point the caller at :check.
+      big_blind_id = TableState.find_next_active_player_id(init_state, init_state.small_blind_id)
+      bb_state = %{init_state | current_player_id: big_blind_id}
+
+      assert TableState.get_player(bb_state, big_blind_id).current_bet == bb_state.highest_raise
+
+      assert {:error, {:use_check_action, _}} =
+               Actions.apply_action(bb_state, %{
+                 type: :call,
+                 player_id: big_blind_id,
+                 amount: bb_state.highest_raise
+               })
+
+      # State unchanged on rejection (validators don't mutate).
+      assert TableState.get_player(bb_state, big_blind_id) ==
+               TableState.get_player(init_state, big_blind_id)
+    end
+
+    test "BB can :check when current_bet already matches highest_raise",
+         %{state: init_state} do
+      big_blind_id = TableState.find_next_active_player_id(init_state, init_state.small_blind_id)
+      bb_state = %{init_state | current_player_id: big_blind_id}
+
+      new_state = Actions.apply_action(bb_state, %{type: :check, player_id: big_blind_id})
+
+      assert TableState.get_player(new_state, big_blind_id).has_acted
+      assert new_state.current_player_id != big_blind_id
+      assert new_state.pot == bb_state.pot
+    end
   end
 
   describe "apply_action :all_in" do
