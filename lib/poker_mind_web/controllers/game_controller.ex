@@ -123,37 +123,30 @@ defmodule PokerMindWeb.GameController do
           "action" => _action
         } = params
       ) do
-    with {:ok, parsed_params} <- parse_params(params) do
-      case Game.apply_action(game_id, parsed_params) do
-        {:ok, game_state} ->
-          mapped_state = map_tablestate(game_state, player_id)
-          json(conn, mapped_state)
-
-        {:error, :game_not_found} ->
-          conn
-          |> put_status(:not_found)
-          |> json(%{error: "Game not found"})
-
-        {:error, {_, reason}} ->
-          conn
-          |> put_status(:bad_request)
-          |> json(%{error: to_string(reason)})
-
-        {:error, reason} ->
-          conn
-          |> put_status(:bad_request)
-          |> json(%{error: to_string(reason)})
-
-        other ->
-          conn
-          |> put_status(:internal_server_error)
-          |> json(%{error: "unexpected response: #{inspect(other)}"})
-      end
+    with {:ok, parsed_params} <- parse_params(params),
+         {:ok, game_state} <- Game.apply_action(game_id, parsed_params) do
+      mapped_state = map_tablestate(game_state, player_id)
+      json(conn, mapped_state)
     else
-      {:error, msg} ->
+      {:error, :game_not_found} ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Game not found"})
+
+      {:error, {_, reason}} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: to_string(reason)})
+
+      {:error, reason} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: to_string(reason)})
+
+      other ->
         conn
         |> put_status(:internal_server_error)
-        |> json(%{error: msg})
+        |> json(%{error: "unexpected response: #{inspect(other)}"})
     end
   end
 
