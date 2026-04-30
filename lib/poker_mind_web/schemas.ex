@@ -170,6 +170,34 @@ defmodule PokerMindWeb.Schemas do
     })
   end
 
+  defmodule CloseSuiteRequest do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "Close Suite Parameters",
+      description: "Required parameters for closing a suite",
+      type: :object,
+      properties: %{
+        suite_id: %Schema{
+          type: :string,
+          description: "Id of suite to close"
+        }
+      },
+      required: [:suite_id]
+    })
+  end
+
+  defmodule CloseSuiteResponse do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "Close Suite Response",
+      description: "Response for closing a suite",
+      type: :object,
+      properties: %{}
+    })
+  end
+
   defmodule NotFound do
     require OpenApiSpex
 
