@@ -157,7 +157,7 @@
 ---
 ---
 
-# Game 3 — Three Players, Ends in Level 1 (3 Players)
+# Game 3 — Ends in Level 1 (3 Players)
 
 ## Setup
 - **Player 1 (P1):** 10,000 chips
@@ -219,16 +219,17 @@
 
 ### Action
 - Pre-flop: P2 folds, P3 raises to 400, P1 re-raises to 1,200, P3 calls
-- Flop: P1 bets 1,500, P3 calls
-- Turn: P1 goes all-in for 7,300, P3 calls
+- Flop: P3 checks, P1 bets 1,500, P3 calls
+- Turn: P3 checks, P1 goes raises to 3,600, P3 calls
+- River: P3 checks, P1 checks
 
 ### Showdown
 - **P1 wins** with pair of Aces (Ah Ad)
 - P3 has Seven-high (missed straight draw)
 
 ### Chip Counts
-- **P1:** 16,400
-- **P2:** 12,900
+- **P1:** 16,300
+- **P2:** 13,000
 - **P3:** 700
 
 ---
@@ -258,9 +259,9 @@
 - P1 has pair of Kings
 
 ### Chip Counts
-- **P1:** 15,650
-- **P2:** 12,800
-- **P3:** 1,450
+- **P1:** 15,600
+- **P2:** 12,900
+- **P3:** 1,500
 
 ---
 
@@ -281,7 +282,7 @@
 - **River:** 2d
 
 ### Action
-- Pre-flop: P1 folds, P2 raises to 400, P3 goes all-in for 1,450, P2 calls
+- Pre-flop: P1 folds, P2 raises to 400, P3 goes all-in for 1,500, P2 calls
 
 ### Showdown
 - **P2 wins** with Ace-high straight (As Jd Qs Td 9c)
@@ -292,14 +293,14 @@
 
 ### Chip Counts
 - **P1:** 15,600
-- **P2:** 14,300
+- **P2:** 14,400
 
 ---
 
 ## Hand 5
 **Blinds:** 50 / 100
-- **P2:** Small Blind / Button
-- **P1:** Big Blind
+- **P1:** Small Blind / Button
+- **P2:** Big Blind
 
 ### Hole Cards
 - **P1:** 8h 8d
@@ -311,23 +312,25 @@
 - **River:** 5s
 
 ### Action
-- Pre-flop: P2 raises to 500, P1 re-raises to 1,500, P2 calls
-- Flop: P1 bets 2,000, P2 raises to 5,000, P1 re-raises all-in for 14,100, P2 calls remaining 7,800
+- Pre-flop: P1 calls, P2 raises to 500, P1 re-raises to 1,500, P2 calls
+- Flop: P1 bets 2,000, P2 raises to 5,000, P1 re-raises to 12,800, P2 calls
+- Turn: Both check
+- River: both check
 
 ### Showdown
 - **P1 wins** with quad Eights (8h 8d 8s 8c)
 - P2 has Ace-King high (pair of Eights on board only)
 
 ### Chip Counts
-- **P1:** 29,900
-- **P2:** 100
+- **P1:** 29,950
+- **P2:** 50
 
 ---
 
 ## Hand 6
 **Blinds:** 50 / 100
-- **P1:** Small Blind / Button
-- **P2:** Big Blind
+- **P2:** Small Blind / Button
+- **P1:** Big Blind
 
 ### Hole Cards
 - **P1:** Kd 7s
@@ -339,7 +342,7 @@
 - **River:** 6d
 
 ### Action
-- P2 posts BB 100 (only 100 chips remaining — all-in), P1 posts SB 50 and calls remaining 50
+- P2 is SB and forced to go all in (only 50 chips left), P1 checks (already 100 chips from BB)
 
 ### Showdown
 - **P1 wins** with pair of Kings (Kd Ks)
@@ -354,8 +357,8 @@
 - **Blind Level:** 50 / 100 (Level 1)
 
 ### Notes / Edge Cases
-- P3 survived an all-in with only 700 chips (hand 3) and clawed back to 1,450
-- P2 reduced to exactly 100 chips — less than 1 BB — forced all-in by the blind itself in hand 6
+- P3 survived an all-in with only 700 chips (hand 3) and clawed back to 1,500
+- P2 reduced to exactly 50 chips — less than 1 SB — forced all-in by the blind itself in hand 6
 - BB all-in for less than a full blind: no raise option available for P1, just a call
 - Quad Eights in hand 5 demonstrates deep-stack slow-play potential with 10,000 starting chips
 
