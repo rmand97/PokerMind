@@ -48,7 +48,8 @@ defmodule PokerMindWeb.Schemas do
               type: :object,
               properties: %{
                 current_hand: %Schema{type: :array, items: Card, description: "Your Hand"}
-              }
+              },
+              required: [:current_hand]
             }
           ]
         },
@@ -110,14 +111,9 @@ defmodule PokerMindWeb.Schemas do
       title: "SuitesResponse",
       description: "Suites and their associated players",
       type: :object,
-      properties: %{
-        data: %OpenApiSpex.Schema{
-          type: :object,
-          additionalProperties: %OpenApiSpex.Schema{
-            type: :array,
-            items: %OpenApiSpex.Schema{type: :string}
-          }
-        }
+      additionalProperties: %OpenApiSpex.Schema{
+        type: :array,
+        items: %OpenApiSpex.Schema{type: :string}
       }
     })
   end
