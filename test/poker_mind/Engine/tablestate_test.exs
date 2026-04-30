@@ -678,6 +678,114 @@ defmodule PokerMind.Engine.TableStateTest do
     end
   end
 
+  describe "all-in-by-blind hands have cards at showdown" do
+    test "BB poster with stack equal to big_blind ends :all_in with hole cards" do
+      # Players list rotates [A, B, C]. With small_blind_id "A" the previous
+      # hand's SB was A, so possible_new_hand rotates new SB to B and new BB
+      # to C. C has chips == big_blind, so posting the BB transitions C to
+      # :all_in. Cards must already be dealt by then.
+      state = %TableState{
+        id: "t",
+        phase: :showdown,
+        players: [
+          %PlayerState{
+            id: "A",
+            remaining_chips: 20_000,
+            state: :active_in_hand,
+            current_bet: 0,
+            total_contributed: 0,
+            has_acted: false,
+            current_hand: []
+          },
+          %PlayerState{
+            id: "B",
+            remaining_chips: 9_000,
+            state: :active_in_hand,
+            current_bet: 0,
+            total_contributed: 0,
+            has_acted: false,
+            current_hand: []
+          },
+          %PlayerState{
+            id: "C",
+            remaining_chips: 100,
+            state: :active_in_hand,
+            current_bet: 0,
+            total_contributed: 0,
+            has_acted: false,
+            current_hand: []
+          }
+        ],
+        pot: 0,
+        deck: [],
+        community_cards: [],
+        small_blind_id: "A",
+        current_player_id: "A",
+        big_blind_amount: 100,
+        highest_raise: 0,
+        raise_amount: 100,
+        hands_played: 1
+      }
+
+      new_hand = TableState.advance_phase(state, :hand_finished)
+
+      c = TableState.get_player(new_hand, "C")
+      assert c.state == :all_in
+      assert is_list(c.current_hand) and length(c.current_hand) == 2
+    end
+
+    test "showdown with an all-in-by-blind contestant does not crash" do
+      community = [
+        %{rank: 2, suit: :diamonds},
+        %{rank: 7, suit: :clubs},
+        %{rank: 5, suit: :hearts},
+        %{rank: 9, suit: :clubs},
+        %{rank: 12, suit: :diamonds}
+      ]
+
+      players = [
+        %PlayerState{
+          id: "A",
+          remaining_chips: 0,
+          state: :all_in,
+          current_bet: 20_100,
+          total_contributed: 20_100,
+          has_acted: true,
+          current_hand: [%{rank: 1, suit: :spades}, %{rank: 1, suit: :clubs}]
+        },
+        %PlayerState{
+          id: "C",
+          remaining_chips: 0,
+          state: :all_in,
+          current_bet: 100,
+          total_contributed: 100,
+          has_acted: true,
+          current_hand: [%{rank: 13, suit: :spades}, %{rank: 13, suit: :clubs}]
+        }
+      ]
+
+      state = %TableState{
+        id: "t",
+        phase: :showdown,
+        players: players,
+        pot: 20_200,
+        deck: [],
+        community_cards: community,
+        small_blind_id: "A",
+        current_player_id: "A",
+        hands_played: 2
+      }
+
+      final = TableState.distribute_pots(state)
+
+      # A (aces) wins the contested 200 main pot and is refunded the 20_000
+      # excess from the side pot. C (kings) gets nothing.
+      assert final.pot == 0
+      assert TableState.get_player(final, "A").remaining_chips == 20_000 + 200
+      assert TableState.get_player(final, "C").remaining_chips == 0
+    end
+  end
+
   describe " reset of betting round helpers" do
     test "reset_highest_raise/1 - resets highest_raise to 0", %{state: state} do
       state = Map.put(state, :highest_raise, 500)

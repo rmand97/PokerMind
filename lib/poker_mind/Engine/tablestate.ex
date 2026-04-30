@@ -45,8 +45,8 @@ defmodule PokerMind.Engine.TableState do
     state
     |> initialize_players(init_players)
     |> new_deck()
-    |> set_blinds()
     |> deal_cards()
+    |> set_blinds()
   end
 
   defp initialize_players(%__MODULE__{} = state, []) do
@@ -541,8 +541,8 @@ defmodule PokerMind.Engine.TableState do
       |> Map.put(:hands_played, new_state.hands_played + 1)
       |> Map.put(:community_cards, [])
       |> new_deck()
-      |> set_blinds(false)
       |> deal_cards()
+      |> set_blinds(false)
       |> Map.put(:phase, :pre_flop)
     end
   end
