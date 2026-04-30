@@ -43,7 +43,9 @@ defmodule PokerMind.Engine.Match.GameTest do
 
     test "apply_action/3 returns {:error, :game_not_found} when game does not exist" do
       non_existing_id = UUID.uuid4()
-      assert {:error, :game_not_found} = Game.apply_action(non_existing_id, "fold", "stine")
+
+      assert {:error, :game_not_found} =
+               Game.apply_action(non_existing_id, %{action: :fold, player_id: "stine"})
     end
   end
 end

@@ -6,7 +6,7 @@ defmodule PokerMind.Engine.TableState do
   defstruct [
     # table-id
     :id,
-    # :pre_flop | :flop | :turn | :river | :showdown
+    # :pre_flop | :flop | :turn | :river | :showdown | :game_finished | :hand_finished
     :phase,
     # list of %TableState.PlayerState{} structs
     :players,

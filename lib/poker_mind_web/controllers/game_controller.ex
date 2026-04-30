@@ -39,12 +39,12 @@ defmodule PokerMindWeb.GameController do
   )
 
   def start_suite(conn, %{"players" => players} = params) do
-    with :ok <- validate_players(players), :ok <- maybe_validate_num_games(params) do
+    with :ok <- validate_players(players),
+         :ok <- maybe_validate_int(params, "num_games") do
       num_games =
         case Map.get(params, "num_games") do
           nil -> 10
           val when is_integer(val) -> val
-          val -> Integer.parse(val)
         end
 
       suite_id = UUID.uuid4()
@@ -143,20 +143,28 @@ defmodule PokerMindWeb.GameController do
     ]
   )
 
-  def perform_action(conn, %{
-        "player_id" => player_id,
-        "game_id" => game_id,
-        "action" => action
-      }) do
-    case Game.apply_action(game_id, action, player_id) do
-      {:ok, state} ->
-        mapped_state = map_tablestate(state.game, player_id)
-        json(conn, mapped_state)
-
+  def perform_action(
+        conn,
+        %{
+          "player_id" => player_id,
+          "game_id" => game_id,
+          "action" => _action
+        } = params
+      ) do
+    with {:ok, parsed_params} <- parse_params(params),
+         {:ok, game_state} <- Game.apply_action(game_id, parsed_params) do
+      mapped_state = map_tablestate(game_state, player_id)
+      json(conn, mapped_state)
+    else
       {:error, :game_not_found} ->
         conn
         |> put_status(:not_found)
         |> json(%{error: "Game not found"})
+
+      {:error, {_, reason}} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: to_string(reason)})
 
       {:error, reason} ->
         conn
@@ -226,21 +234,58 @@ defmodule PokerMindWeb.GameController do
     end
   end
 
-  defp maybe_validate_num_games(params) do
-    num_games = Map.get(params, "num_games")
+  defp maybe_validate_int(params, key) do
+    val = Map.get(params, key)
 
     cond do
-      is_nil(num_games) ->
+      is_nil(val) ->
         :ok
 
-      is_integer(num_games) ->
+      is_integer(val) ->
         :ok
-
-      Integer.parse(num_games) == :error ->
-        {:error, "num_games is not a textual representation of an integer"}
 
       true ->
-        :ok
+        {:error, "key #{key} is not an integer, got: #{inspect(val)}"}
+    end
+  end
+
+  defp parse_params(params) do
+    with {:ok, params} <- parse_type(params),
+         {:ok, params} <- parse_player_id(params),
+         :ok <- maybe_validate_int(params, "amount") do
+      parsed_params =
+        for {k, v} <- Map.take(params, ["action", "player_id", "amount"]),
+            into: %{},
+            do: {String.to_existing_atom(k), v}
+
+      {:ok, parsed_params}
+    end
+  end
+
+  @allowed_actions ["call", "raise", "all_in", "fold", "check"]
+  defp parse_type(params) do
+    type = Map.get(params, "action")
+
+    cond do
+      not is_binary(type) ->
+        {:error, "The given action is not a binary/string, got #{inspect(type)}"}
+
+      type not in @allowed_actions ->
+        {:error,
+         "given action action is not allowed, only accepts the following: #{inspect(@allowed_actions)}"}
+
+      true ->
+        {:ok, %{params | "action" => String.to_existing_atom(type)}}
+    end
+  end
+
+  defp parse_player_id(params) do
+    player_id = Map.get(params, "player_id")
+
+    if not is_binary(player_id) and player_id != "" do
+      {:error, "provided player_id has to be a non-empty string"}
+    else
+      {:ok, params}
     end
   end
 end

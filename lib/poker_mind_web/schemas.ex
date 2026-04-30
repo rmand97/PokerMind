@@ -128,7 +128,8 @@ defmodule PokerMindWeb.Schemas do
       properties: %{
         player_id: %Schema{type: :string, description: "Your ID"},
         game_id: %Schema{type: :string, description: "Game ID"},
-        action: %Schema{type: :string, description: "Action to perform"}
+        action: %Schema{type: :string, description: "Action to perform"},
+        amount: %Schema{type: :integer, description: "Amount you raise to if raise"}
       },
       required: [:player_id, :game_id, :action]
     })

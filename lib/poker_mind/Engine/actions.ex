@@ -69,8 +69,8 @@ defmodule PokerMind.Engine.Actions do
     end
   end
 
-  def apply_action(_state, _action) do
-    {:error, {:invalid_action, "Action is not supported"}}
+  def apply_action(_state, action) do
+    {:error, {:invalid_action, "Action is not supported, got: #{inspect(action)}"}}
   end
 
   # Over-the-top all-in re-opens action: updates highest_raise and clears

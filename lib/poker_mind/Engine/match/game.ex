@@ -1,7 +1,9 @@
 defmodule PokerMind.Engine.Match.Game do
   alias PokerMind.Engine
+  alias PokerMind.Engine.Actions
   alias PokerMind.Engine.Match.Coordinator
   alias PokerMind.Engine.TableState
+
   use GenServer
 
   def start_link(opts) do
@@ -15,9 +17,10 @@ defmodule PokerMind.Engine.Match.Game do
     end)
   end
 
-  def apply_action(game_id, action, player) do
+  def apply_action(game_id, %{action: action_type, player_id: player_id} = action)
+      when is_atom(action_type) and is_binary(player_id) do
     ensure_exists(game_id, fn ->
-      GenServer.call(Engine.Registry.via(game_id), {:apply_action, action, player})
+      GenServer.call(Engine.Registry.via(game_id), {:apply_action, action})
     end)
   end
 
@@ -63,13 +66,33 @@ defmodule PokerMind.Engine.Match.Game do
   end
 
   @impl true
-  def handle_call({:apply_action, _action, _player}, _from, %{finished?: true} = state) do
+  def handle_call({:apply_action, %{action: _, player_id: _}}, _from, %{finished?: true} = state) do
     {:reply, {:error, :game_finished}, state}
   end
 
   @impl true
-  def handle_call({:apply_action, _action, _player}, _from, %{finished?: false} = state) do
-    {:reply, {:ok, state}, state}
+  def handle_call(
+        {:apply_action, %{action: _, player_id: _} = action},
+        _from,
+        %{finished?: false} = state
+      ) do
+    case Actions.apply_action(state.game, action) do
+      %TableState{} = new_game_state ->
+        finished? = new_game_state.phase == :game_finished
+
+        if finished? do
+          Coordinator.register_game_finished(
+            state.coordinator_id,
+            state.id,
+            new_game_state.winner
+          )
+        end
+
+        {:reply, {:ok, new_game_state}, %{state | game: new_game_state, finished?: finished?}}
+
+      {:error, _msg} = err ->
+        {:reply, err, state}
+    end
   end
 
   @impl true
