@@ -9,6 +9,8 @@ defmodule PokerMindWeb.GameController do
   alias PokerMind.Engine.TableState.PlayerState
   alias PokerMindWeb.Schemas.ActionRequest
   alias PokerMindWeb.Schemas.BadRequest
+  alias PokerMindWeb.Schemas.CloseSuiteRequest
+  alias PokerMindWeb.Schemas.CloseSuiteResponse
   alias PokerMindWeb.Schemas.GameResponse
   alias PokerMindWeb.Schemas.InternalServerError
   alias PokerMindWeb.Schemas.NotFound
@@ -57,6 +59,32 @@ defmodule PokerMindWeb.GameController do
     conn
     |> put_status(:bad_request)
     |> json(%{error: "players are required"})
+  end
+
+  operation(:close_suite,
+    summary: "Close a game suite",
+    request_body: {"Close suite params", "application/json", CloseSuiteRequest},
+    responses: [
+      ok: {"Closed suite", "application/json", CloseSuiteResponse},
+      not_found: {"Not found", "application/json", NotFound},
+      bad_request: {"Bad request", "application/json", BadRequest}
+    ]
+  )
+
+  def close_suite(conn, %{"id" => suite_id}) do
+    case MatchSupervisor.close_match_suite(suite_id) do
+      :ok ->
+        json(conn, %{})
+
+      {:error, :suite_not_found} ->
+        conn |> put_status(:not_found) |> json(%{error: "suite_id not found"})
+    end
+  end
+
+  def close_suite(conn, _params) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{error: "suite_id is required"})
   end
 
   operation(:next_games,

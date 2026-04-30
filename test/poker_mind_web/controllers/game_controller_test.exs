@@ -159,6 +159,34 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     assert length(Map.keys(games)) == num_games
   end
 
+  test "DELETE /api/close_suite closes an existing suite", %{conn: conn} do
+    num_games = 3
+    players = ["rolf", "stine"]
+
+    # Start suite
+    json =
+      conn
+      |> post("/api/start_suite", %{
+        "players" => players,
+        "num_games" => num_games
+      })
+      |> json_response(200)
+
+    suite_id = json["suite_id"]
+
+    assert %{^suite_id => actual_players} = MatchSupervisor.all_match_suites()
+    assert players == actual_players
+
+    # Close suite
+    conn
+    |> delete("/api/close_suite", %{
+      "id" => suite_id
+    })
+    |> json_response(200)
+
+    assert %{} = MatchSupervisor.all_match_suites()
+  end
+
   test "GameController suites produces a SuitesResponse", %{conn: conn} do
     suite1_id = UUID.uuid4()
     players1 = ["rolf", "stine"]
@@ -254,5 +282,31 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
 
     api_spec = PokerMindWeb.ApiSpec.spec()
     assert_schema(json, "Start Suite Response", api_spec)
+  end
+
+  test "GameController close_suite produces a Close Suite Response", %{conn: conn} do
+    num_games = 5
+
+    # Start suite
+    json =
+      conn
+      |> post("/api/start_suite", %{
+        "players" => ["rolf", "stine"],
+        "num_games" => num_games
+      })
+      |> json_response(200)
+
+    # Close suite
+    suite_id = json["suite_id"]
+
+    json =
+      conn
+      |> delete("/api/close_suite", %{
+        "id" => suite_id
+      })
+      |> json_response(200)
+
+    api_spec = PokerMindWeb.ApiSpec.spec()
+    assert_schema(json, "Close Suite Response", api_spec)
   end
 end

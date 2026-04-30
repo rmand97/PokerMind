@@ -312,7 +312,7 @@ defmodule PokerMind.Engine.ActionsTest do
 
       assert {:error, {:use_check_action, _}} =
                Actions.apply_action(bb_state, %{
-                 type: :call,
+                 action: :call,
                  player_id: big_blind_id,
                  amount: bb_state.highest_raise
                })
@@ -327,7 +327,7 @@ defmodule PokerMind.Engine.ActionsTest do
       big_blind_id = TableState.find_next_active_player_id(init_state, init_state.small_blind_id)
       bb_state = %{init_state | current_player_id: big_blind_id}
 
-      new_state = Actions.apply_action(bb_state, %{type: :check, player_id: big_blind_id})
+      new_state = Actions.apply_action(bb_state, %{action: :check, player_id: big_blind_id})
 
       assert TableState.get_player(new_state, big_blind_id).has_acted
       assert new_state.current_player_id != big_blind_id
