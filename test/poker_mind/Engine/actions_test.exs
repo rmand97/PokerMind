@@ -375,7 +375,10 @@ defmodule PokerMind.Engine.ActionsTest do
         Actions.apply_action(init_state, %{action: :fold, player_id: starting_player_id})
 
       assert {:error, {:player_not_active, _}} =
-               Actions.apply_action(folded_state, %{action: :all_in, player_id: starting_player_id})
+               Actions.apply_action(folded_state, %{
+                 action: :all_in,
+                 player_id: starting_player_id
+               })
     end
 
     test "all_in - short all-in (< highest_raise) does not re-open betting",
@@ -784,7 +787,10 @@ defmodule PokerMind.Engine.ActionsTest do
       assert after_starting_player_fold.current_player_id == small_blind
 
       after_small_blind_all_in =
-        Actions.apply_action(after_starting_player_fold, %{action: :all_in, player_id: small_blind})
+        Actions.apply_action(after_starting_player_fold, %{
+          action: :all_in,
+          player_id: small_blind
+        })
 
       big_blind = after_small_blind_all_in.current_player_id
       assert big_blind != small_blind and big_blind != starting_player
