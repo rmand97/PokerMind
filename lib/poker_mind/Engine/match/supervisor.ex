@@ -19,8 +19,13 @@ defmodule PokerMind.Engine.Match.Supervisor do
   end
 
   def close_match_suite(suite_id) do
-    [{pid, _value}] = Registry.lookup(PokerMind.Engine.Registry, suite_id)
-    DynamicSupervisor.terminate_child(__MODULE__, pid)
+    case Registry.lookup(PokerMind.Engine.Registry, suite_id) do
+      [] ->
+        {:error, :suite_not_found}
+
+      [{pid, _value}] ->
+        DynamicSupervisor.terminate_child(__MODULE__, pid)
+    end
   end
 
   def all_match_suites() do
