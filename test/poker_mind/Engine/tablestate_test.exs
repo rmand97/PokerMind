@@ -526,6 +526,39 @@ defmodule PokerMind.Engine.TableStateTest do
       assert [%{amount: 200, eligible_ids: ["A", "B"]}] = result.pots
       assert [{"B", 400}] = result.refunds
     end
+
+    test "build_pots/1 - blinds fold to a sub-BB short all-in: forfeit absorbed by top pot" do
+      # Pot of 200 = SB 50 + BB 100 + UTG short all-in 50. Both blinds fold.
+      # Without the folded-overbet absorption, the BB poster's 50 chips above
+      # the in-hand cap (50) would silently disappear from the pot.
+      state =
+        pots_state([
+          {"alice", :all_in, 50},
+          {"bob", :inactive_in_hand, 100},
+          {"carol", :inactive_in_hand, 50}
+        ])
+
+      result = TableState.build_pots(state)
+      assert result.pots == []
+      assert result.refunds == [{"alice", 200}]
+    end
+
+    test "build_pots/1 - folded over-bet folds into single-eligible top side pot" do
+      # A all-in 200, B in-hand 500, folded C 700.
+      # Main pot {600, [A, B]} contested.
+      # Top layer {600, [B]} single-eligible → refund. Forfeit from C above
+      # the 500 cap (200) must be absorbed by that refund.
+      state =
+        pots_state([
+          {"A", :all_in, 200},
+          {"B", :active_in_hand, 500},
+          {"C", :inactive_in_hand, 700}
+        ])
+
+      result = TableState.build_pots(state)
+      assert result.pots == [%{amount: 600, eligible_ids: ["A", "B"]}]
+      assert result.refunds == [{"B", 800}]
+    end
   end
 
   describe "distribute_pots/1" do
@@ -614,6 +647,45 @@ defmodule PokerMind.Engine.TableStateTest do
       assert TableState.get_player(final, "B").remaining_chips == 331 - 50
       assert TableState.get_player(final, "C").remaining_chips == 330 - 100
       assert TableState.get_player(final, "D").remaining_chips == 0
+    end
+
+    test "distribute_pots/1 - blinds fold to sub-BB short all-in: chips conserved" do
+      # SB 50 + BB 100 + UTG sub-BB short all-in 50. Both blinds fold,
+      # leaving alice as the only player still in the hand. Total chips
+      # (stacks + pot) must be conserved across the showdown — the BB
+      # poster's 50 chips above the in-hand cap must not vanish.
+      community = [
+        %{rank: 2, suit: :diamonds},
+        %{rank: 7, suit: :clubs},
+        %{rank: 5, suit: :hearts},
+        %{rank: 9, suit: :clubs},
+        %{rank: 12, suit: :diamonds}
+      ]
+
+      players = [
+        showdown_player("alice", :all_in, 50, [
+          %{rank: 1, suit: :spades},
+          %{rank: 1, suit: :clubs}
+        ]),
+        showdown_player("bob", :inactive_in_hand, 100, [
+          %{rank: 4, suit: :spades},
+          %{rank: 8, suit: :clubs}
+        ]),
+        showdown_player("carol", :inactive_in_hand, 50, [
+          %{rank: 6, suit: :hearts},
+          %{rank: 10, suit: :clubs}
+        ])
+      ]
+
+      state = showdown_state(players, community)
+      before = state.pot + Enum.sum(Enum.map(state.players, & &1.remaining_chips))
+
+      final = TableState.distribute_pots(state)
+      after_total = final.pot + Enum.sum(Enum.map(final.players, & &1.remaining_chips))
+
+      assert before == after_total
+      assert final.pot == 0
+      assert TableState.get_player(final, "alice").remaining_chips == 200
     end
 
     test "distribute_pots/1 - all-in player wins main pot, bigger stack wins side pot" do
