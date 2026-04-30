@@ -9,7 +9,8 @@ defmodule PokerMindWeb.Schemas do
       properties: %{
         rank: %Schema{type: :integer},
         suit: %Schema{type: :string}
-      }
+      },
+      required: [:rank, :suit]
     })
   end
 
@@ -27,7 +28,8 @@ defmodule PokerMindWeb.Schemas do
           description: "Whether the player has acted in this betting round"
         },
         current_bet: %Schema{type: :integer, description: "Your current bet"}
-      }
+      },
+      required: [:id, :remaining_chips, :state, :has_acted, :current_bet]
     })
   end
 
@@ -38,7 +40,7 @@ defmodule PokerMindWeb.Schemas do
       title: "Game",
       type: :object,
       properties: %{
-        id: %Schema{type: :integer, description: "Game ID"},
+        id: %Schema{type: :string, description: "Game ID"},
         player: %Schema{
           allOf: [
             Player,
@@ -60,7 +62,17 @@ defmodule PokerMindWeb.Schemas do
         community_cards: %Schema{type: :array, items: Card, description: "Cards on the table"},
         current_player_id: %Schema{type: :string, description: "Current player turn"},
         highest_raise: %Schema{type: :integer, description: "Current bet to match"}
-      }
+      },
+      required: [
+        :id,
+        :player,
+        :other_players,
+        :phase,
+        :pot,
+        :community_cards,
+        :current_player_id,
+        :highest_raise
+      ]
     })
   end
 
@@ -72,15 +84,22 @@ defmodule PokerMindWeb.Schemas do
       description: "A list of upcoming games",
       type: :object,
       properties: %{
+        all_games_finished: %Schema{
+          type: :boolean,
+          description: "All games in the suite are finished"
+        },
         games: %Schema{
           type: :array,
           items: Game
         },
-        all_games_finished: %Schema{
-          type: :boolean,
-          description: "All games in the suite are finished"
+        overall_winners: %Schema{
+          type: :array,
+          nullable: true,
+          items: %Schema{type: :string},
+          description: "The overall winners of the suite"
         }
-      }
+      },
+      required: [:games, :all_games_finished, :overall_winners]
     })
   end
 
