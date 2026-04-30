@@ -110,7 +110,7 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
     end
   end
 
-  test "can mark game as finished" do
+  test "can mark game as finished, one game one winner" do
     coordinator_id = UUID.uuid4()
     game_id = UUID.uuid4()
     winning_player = "rolf"
@@ -135,6 +135,55 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
     assert is_nil(game.next_player)
     assert game.winner == winning_player
     assert Coordinator.get_state(coordinator_id).all_games_finished?
+    assert Coordinator.get_state(coordinator_id).winners == [winning_player]
+  end
+
+  test "can mark game as finished, multiple games multiple winners" do
+    coordinator_id = UUID.uuid4()
+    game_id1 = UUID.uuid4()
+    game_id2 = UUID.uuid4()
+    winning_player1 = "rolf"
+    winning_player2 = "stine"
+    num_games = 2
+
+    start_supervised!(
+      {Coordinator,
+       name: coordinator_id, num_games: num_games, players: [winning_player1, winning_player2]}
+    )
+
+    start_supervised!(
+      Supervisor.child_spec(
+        {Game,
+         name: game_id1,
+         players: [winning_player1, winning_player2],
+         coordinator_id: coordinator_id},
+        id: {Game, game_id1}
+      )
+    )
+
+    start_supervised!(
+      Supervisor.child_spec(
+        {Game,
+         name: game_id2,
+         players: [winning_player1, winning_player2],
+         coordinator_id: coordinator_id},
+        id: {Game, game_id2}
+      )
+    )
+
+    assert :ok = Coordinator.register_game_finished(coordinator_id, game_id1, winning_player1)
+    assert :ok = Coordinator.register_game_finished(coordinator_id, game_id2, winning_player2)
+    state = Coordinator.get_state(coordinator_id)
+    assert %{^game_id1 => game1, ^game_id2 => game2} = state.games
+
+    assert game1.finished?
+    assert game2.finished?
+    assert is_nil(game1.next_player)
+    assert is_nil(game2.next_player)
+    assert game1.winner == winning_player1
+    assert game2.winner == winning_player2
+    assert Coordinator.get_state(coordinator_id).all_games_finished?
+    assert Coordinator.get_state(coordinator_id).winners == [winning_player1, winning_player2]
   end
 
   describe "ensure_exists" do
