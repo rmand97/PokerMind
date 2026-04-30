@@ -235,23 +235,23 @@ defmodule PokerMind.Engine.IntegrationTest do
   end
 
   defp raise_(state, player_id, amount) do
-    Actions.apply_action(state, %{type: :raise, player_id: player_id, amount: amount})
+    Actions.apply_action(state, %{action: :raise, player_id: player_id, amount: amount})
   end
 
   defp call(state, player_id, amount) do
-    Actions.apply_action(state, %{type: :call, player_id: player_id, amount: amount})
+    Actions.apply_action(state, %{action: :call, player_id: player_id, amount: amount})
   end
 
   defp check(state, player_id) do
-    Actions.apply_action(state, %{type: :check, player_id: player_id})
+    Actions.apply_action(state, %{action: :check, player_id: player_id})
   end
 
   defp fold(state, player_id) do
-    Actions.apply_action(state, %{type: :fold, player_id: player_id})
+    Actions.apply_action(state, %{action: :fold, player_id: player_id})
   end
 
   defp all_in(state, player_id) do
-    Actions.apply_action(state, %{type: :all_in, player_id: player_id})
+    Actions.apply_action(state, %{action: :all_in, player_id: player_id})
   end
 
   defp withdraw_cards_from_deck(state, cards) do
