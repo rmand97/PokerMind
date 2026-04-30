@@ -334,6 +334,21 @@ defmodule PokerMind.Engine.TableState do
       |> Enum.uniq()
       |> Enum.sort()
 
+    # Chips committed by folded players above the highest in-hand cap would
+    # otherwise be dropped: build_pots only emits layers up to that cap, so a
+    # folded player who over-contributed (e.g. a BB poster who folds to a
+    # sub-blind short all-in) loses chips that no in-hand player can match.
+    # Fold the forfeit into the topmost raw pot — it goes to whoever wins the
+    # layer at the highest in-hand cap, exactly as if the folder had checked
+    # down.
+    max_in_hand_cap = List.last(layers) || 0
+
+    folded_overbet =
+      players
+      |> Enum.filter(&(&1.state not in [:active_in_hand, :all_in]))
+      |> Enum.map(&max(0, &1.total_contributed - max_in_hand_cap))
+      |> Enum.sum()
+
     {raw_pots, _} =
       Enum.map_reduce(layers, 0, fn layer, prev_layer ->
         amount =
@@ -348,6 +363,17 @@ defmodule PokerMind.Engine.TableState do
 
         {%{amount: amount, eligible_ids: eligible_player_ids}, layer}
       end)
+
+    raw_pots =
+      case raw_pots do
+        [] ->
+          raw_pots
+
+        _ ->
+          List.update_at(raw_pots, -1, fn pot ->
+            Map.update!(pot, :amount, &(&1 + folded_overbet))
+          end)
+      end
 
     # Collapse single-eligible pots into refunds (uncontested middle/top layers).
     {pots, refunds} =
