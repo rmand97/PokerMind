@@ -255,4 +255,30 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     api_spec = PokerMindWeb.ApiSpec.spec()
     assert_schema(json, "Start Suite Response", api_spec)
   end
+
+  test "GameController close_suite produces a Close Suite Response", %{conn: conn} do
+    num_games = 5
+
+    # Start suite
+    json =
+      conn
+      |> post("/api/start_suite", %{
+        "players" => ["rolf", "stine"],
+        "num_games" => num_games
+      })
+      |> json_response(200)
+
+    # Close suite
+    suite_id = json["suite_id"]
+
+    json =
+      conn
+      |> delete("/api/close_suite", %{
+        "id" => suite_id
+      })
+      |> json_response(200)
+
+    api_spec = PokerMindWeb.ApiSpec.spec()
+    assert_schema(json, "Close Suite Response", api_spec)
+  end
 end
