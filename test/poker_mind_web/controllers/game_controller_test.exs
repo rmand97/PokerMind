@@ -220,15 +220,16 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     suite_id = UUID.uuid4()
     game_id = Game.id(suite_id, 1)
     num_games = 10
-    players = ["stine"]
+    players = ["stine", "rolf"]
 
     {:ok, _pid, suite_id} = MatchSupport.start_match_suite!(suite_id, players, num_games)
     on_exit(fn -> MatchSupervisor.close_match_suite(suite_id) end)
+    starting_player_id = Game.get_state(game_id).game.small_blind_id
 
     json =
       conn
       |> post("/api/action", %{
-        "player_id" => "stine",
+        "player_id" => starting_player_id,
         "game_id" => game_id,
         "action" => "fold"
       })
