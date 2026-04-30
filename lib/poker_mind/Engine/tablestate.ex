@@ -385,6 +385,10 @@ defmodule PokerMind.Engine.TableState do
     Map.put(state, :highest_raise, 0)
   end
 
+  def reset_raise_amount(%__MODULE__{} = state) do
+    Map.put(state, :raise_amount, 0)
+  end
+
   def compare_cards(rank1, rank2)
       when is_integer(rank1) and is_integer(rank2) do
     rank1 = normalize_rank(rank1)
