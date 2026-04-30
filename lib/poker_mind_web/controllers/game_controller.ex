@@ -9,14 +9,14 @@ defmodule PokerMindWeb.GameController do
   alias PokerMind.Engine.TableState.PlayerState
   alias PokerMindWeb.Schemas.ActionRequest
   alias PokerMindWeb.Schemas.BadRequest
+  alias PokerMindWeb.Schemas.CloseSuiteRequest
+  alias PokerMindWeb.Schemas.CloseSuiteResponse
   alias PokerMindWeb.Schemas.GameResponse
   alias PokerMindWeb.Schemas.InternalServerError
   alias PokerMindWeb.Schemas.NotFound
   alias PokerMindWeb.Schemas.StartSuiteRequest
   alias PokerMindWeb.Schemas.StartSuiteResponse
   alias PokerMindWeb.Schemas.SuitesResponse
-  alias PokerMindWeb.Schemas.CloseSuiteRequest
-  alias PokerMindWeb.Schemas.CloseSuiteResponse
 
   operation(:suites,
     summary: "List all match suites",
