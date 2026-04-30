@@ -172,9 +172,12 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
       })
       |> json_response(200)
 
-    # Close suite
     suite_id = json["suite_id"]
 
+    assert %{^suite_id => actual_players} = MatchSupervisor.all_match_suites()
+    assert players == actual_players
+
+    # Close suite
     conn
     |> delete("/api/close_suite", %{
       "id" => suite_id
