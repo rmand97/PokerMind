@@ -122,8 +122,8 @@ defmodule PokerMindWeb.GameController do
       }) do
     case Game.apply_action(game_id, action, player_id) do
       {:ok, state} ->
-        mapped_state = %{state | game: map_tablestate(state.game, player_id)}
-        json(conn, %{data: mapped_state})
+        mapped_state = map_tablestate(state.game, player_id)
+        json(conn, mapped_state)
 
       {:error, :game_not_found} ->
         conn
