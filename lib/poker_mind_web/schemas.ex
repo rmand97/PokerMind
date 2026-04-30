@@ -84,6 +84,25 @@ defmodule PokerMindWeb.Schemas do
     })
   end
 
+  defmodule SuitesResponse do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "SuitesResponse",
+      description: "Suites and their associated players",
+      type: :object,
+      properties: %{
+        data: %OpenApiSpex.Schema{
+          type: :object,
+          additionalProperties: %OpenApiSpex.Schema{
+            type: :array,
+            items: %OpenApiSpex.Schema{type: :string}
+          }
+        }
+      }
+    })
+  end
+
   defmodule ActionRequest do
     require OpenApiSpex
 

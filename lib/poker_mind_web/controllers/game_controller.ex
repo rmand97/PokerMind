@@ -14,6 +14,14 @@ defmodule PokerMindWeb.GameController do
   alias PokerMindWeb.Schemas.NotFound
   alias PokerMindWeb.Schemas.StartSuiteRequest
   alias PokerMindWeb.Schemas.StartSuiteResponse
+  alias PokerMindWeb.Schemas.SuitesResponse
+
+  operation(:suites,
+    summary: "List all match suites",
+    responses: [
+      ok: {"List of match suites and associated players", "application/json", SuitesResponse}
+    ]
+  )
 
   def suites(conn, _params) do
     json(conn, %{data: MatchSupervisor.all_match_suites()})
