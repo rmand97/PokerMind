@@ -85,7 +85,16 @@ defmodule PokerMindWeb.GameController do
 
       games ->
         mapped_games = Enum.map(games, fn game -> map_tablestate(game, player_id) end)
-        json(conn, %{data: mapped_games})
+        all_games_finished = Coordinator.get_state(coordinator_id).all_games_finished?
+        overall_winners = Coordinator.get_state(coordinator_id).winners
+
+        data = %{
+          "all_games_finished" => all_games_finished,
+          "games" => mapped_games,
+          "overall_winners" => overall_winners
+        }
+
+        json(conn, data)
     end
   end
 
@@ -113,8 +122,8 @@ defmodule PokerMindWeb.GameController do
       }) do
     case Game.apply_action(game_id, action, player_id) do
       {:ok, state} ->
-        mapped_state = %{state | game: map_tablestate(state.game, player_id)}
-        json(conn, %{data: mapped_state})
+        mapped_state = map_tablestate(state.game, player_id)
+        json(conn, mapped_state)
 
       {:error, :game_not_found} ->
         conn

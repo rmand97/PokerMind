@@ -16,7 +16,15 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
 
     # "stine" gets 10 games
     conn = get(conn, "/api/next_games", %{"player_id" => "rolf", "suite_id" => suite_id})
-    assert %{"data" => games} = json_response(conn, 200)
+
+    assert %{
+             "all_games_finished" => all_games_finished,
+             "games" => games,
+             "overall_winners" => overall_winners
+           } = json_response(conn, 200)
+
+    assert all_games_finished == false
+    assert overall_winners == nil
     assert length(games) == 10
   end
 
@@ -55,9 +63,9 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
         "action" => "fold"
       })
 
-    assert %{"data" => state} = json_response(conn, 200)
+    assert state = json_response(conn, 200)
 
-    assert Map.keys(state["game"]) == [
+    assert Map.keys(state) == [
              "community_cards",
              "current_player_id",
              "highest_raise",
@@ -68,7 +76,7 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
              "pot"
            ]
 
-    assert Map.keys(hd(state["game"]["other_players"])) == [
+    assert Map.keys(hd(state["other_players"])) == [
              "current_bet",
              "has_acted",
              "id",
@@ -76,7 +84,7 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
              "state"
            ]
 
-    assert Map.keys(state["game"]["player"]) == [
+    assert Map.keys(state["player"]) == [
              "current_bet",
              "current_hand",
              "has_acted",
@@ -167,12 +175,36 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     assert_schema(json, "SuitesResponse", api_spec)
   end
 
-  test "GameController next_games produces a GameResponse", %{conn: conn} do
+  test "GameController next_games produces a GameResponse, game not finished", %{conn: conn} do
     suite_id = UUID.uuid4()
     num_games = 10
     players = ["stine"]
 
     {:ok, _pid, suite_id} = MatchSupport.start_match_suite!(suite_id, players, num_games)
+    on_exit(fn -> MatchSupervisor.close_match_suite(suite_id) end)
+
+    json =
+      conn
+      |> get("/api/next_games", %{"player_id" => "stine", "suite_id" => suite_id})
+      |> json_response(200)
+
+    api_spec = PokerMindWeb.ApiSpec.spec()
+    assert_schema(json, "GameResponse", api_spec)
+  end
+
+  test "GameController next_games produces a GameResponse, game finished", %{conn: conn} do
+    suite_id = UUID.uuid4()
+    coordinator_id = Coordinator.id(suite_id)
+    num_games = 10
+    players = ["stine"]
+
+    {:ok, _pid, suite_id} = MatchSupport.start_match_suite!(suite_id, players, num_games)
+
+    Enum.each(1..10, fn i ->
+      game_id = Game.id(suite_id, i)
+      :ok = Coordinator.register_game_finished(coordinator_id, game_id, "stine")
+    end)
+
     on_exit(fn -> MatchSupervisor.close_match_suite(suite_id) end)
 
     json =
