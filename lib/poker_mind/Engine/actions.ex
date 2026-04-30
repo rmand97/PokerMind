@@ -31,7 +31,7 @@ defmodule PokerMind.Engine.Actions do
   def apply_action(%TableState{} = state, %{action: :call, player_id: player_id, amount: amount})
       when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id),
-         :ok <- validate_call(state, amount),
+         :ok <- validate_call(state, player_id, amount),
          :ok <- validate_amount(state, player_id, amount) do
       state
       |> TableState.add_to_pot(player_id, amount)
