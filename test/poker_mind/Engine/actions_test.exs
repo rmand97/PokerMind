@@ -242,8 +242,7 @@ defmodule PokerMind.Engine.ActionsTest do
       new_state =
         Actions.apply_action(new_state, %{
           action: :call,
-          player_id: next_player_id,
-          amount: 2 * init_state.highest_raise
+          player_id: next_player_id
         })
 
       # check that the calling player is still :active_in_hand
@@ -261,46 +260,6 @@ defmodule PokerMind.Engine.ActionsTest do
       assert next_player_remaining_chips == starting_stack - 2 * init_state.highest_raise
     end
 
-    test "call rejects amount less than highest_raise", %{state: init_state} do
-      starting_player_id = init_state.current_player_id
-
-      raised_state =
-        Actions.apply_action(init_state, %{
-          action: :raise,
-          player_id: starting_player_id,
-          amount: 2 * init_state.highest_raise
-        })
-
-      next_player_id = raised_state.current_player_id
-
-      assert {:error, {:invalid_call_amount, _}} =
-               Actions.apply_action(raised_state, %{
-                 action: :call,
-                 player_id: next_player_id,
-                 amount: init_state.highest_raise
-               })
-    end
-
-    test "call rejects amount greater than highest_raise", %{state: init_state} do
-      starting_player_id = init_state.current_player_id
-
-      raised_state =
-        Actions.apply_action(init_state, %{
-          action: :raise,
-          player_id: starting_player_id,
-          amount: 2 * init_state.highest_raise
-        })
-
-      next_player_id = raised_state.current_player_id
-
-      assert {:error, {:invalid_call_amount, _}} =
-               Actions.apply_action(raised_state, %{
-                 action: :call,
-                 player_id: next_player_id,
-                 amount: 3 * init_state.highest_raise
-               })
-    end
-
     test "call rejected when player's current_bet already matches highest_raise (use :check)",
          %{state: init_state} do
       # Big blind has already posted big_blind_amount and so current_bet == highest_raise.
@@ -312,9 +271,8 @@ defmodule PokerMind.Engine.ActionsTest do
 
       assert {:error, {:use_check_action, _}} =
                Actions.apply_action(bb_state, %{
-                 type: :call,
-                 player_id: big_blind_id,
-                 amount: bb_state.highest_raise
+                 action: :call,
+                 player_id: big_blind_id
                })
 
       # State unchanged on rejection (validators don't mutate).
@@ -327,7 +285,7 @@ defmodule PokerMind.Engine.ActionsTest do
       big_blind_id = TableState.find_next_active_player_id(init_state, init_state.small_blind_id)
       bb_state = %{init_state | current_player_id: big_blind_id}
 
-      new_state = Actions.apply_action(bb_state, %{type: :check, player_id: big_blind_id})
+      new_state = Actions.apply_action(bb_state, %{action: :check, player_id: big_blind_id})
 
       assert TableState.get_player(new_state, big_blind_id).has_acted
       assert new_state.current_player_id != big_blind_id
@@ -424,7 +382,7 @@ defmodule PokerMind.Engine.ActionsTest do
       p2 = after_raise.current_player_id
 
       after_call =
-        Actions.apply_action(after_raise, %{action: :call, player_id: p2, amount: 800})
+        Actions.apply_action(after_raise, %{action: :call, player_id: p2})
 
       assert TableState.get_player(after_call, p1).has_acted
       assert TableState.get_player(after_call, p2).has_acted
@@ -451,7 +409,7 @@ defmodule PokerMind.Engine.ActionsTest do
       p2 = after_raise.current_player_id
 
       after_call =
-        Actions.apply_action(after_raise, %{action: :call, player_id: p2, amount: 500})
+        Actions.apply_action(after_raise, %{action: :call, player_id: p2})
 
       p3 = after_call.current_player_id
       # Hard-coding player 3's remaining chips to perform all-in which matches the highest raise
@@ -476,7 +434,7 @@ defmodule PokerMind.Engine.ActionsTest do
       p2 = after_raise.current_player_id
 
       after_call =
-        Actions.apply_action(after_raise, %{action: :call, player_id: p2, amount: 500})
+        Actions.apply_action(after_raise, %{action: :call, player_id: p2})
 
       assert TableState.get_player(after_call, p1).has_acted
       assert TableState.get_player(after_call, p2).has_acted
@@ -624,8 +582,7 @@ defmodule PokerMind.Engine.ActionsTest do
       assert {:error, {:use_all_in_action, _}} =
                Actions.apply_action(call_state, %{
                  action: :call,
-                 player_id: starting_player_id,
-                 amount: call_state.highest_raise
+                 player_id: starting_player_id
                })
     end
 
@@ -754,8 +711,7 @@ defmodule PokerMind.Engine.ActionsTest do
       call_state =
         Actions.apply_action(raise_state, %{
           action: :call,
-          player_id: call_player_id,
-          amount: 2 * init_state.highest_raise
+          player_id: call_player_id
         })
 
       # did call action go through?
@@ -781,8 +737,7 @@ defmodule PokerMind.Engine.ActionsTest do
         Enum.reduce(1..3, raised, fn _, s ->
           Actions.apply_action(s, %{
             action: :call,
-            player_id: s.current_player_id,
-            amount: 2 * init_state.highest_raise
+            player_id: s.current_player_id
           })
         end)
 
