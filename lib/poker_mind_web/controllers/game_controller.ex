@@ -104,7 +104,7 @@ defmodule PokerMindWeb.GameController do
     coordinator_id = Coordinator.id(suite_id)
 
     case Coordinator.next_games(coordinator_id, player_id) do
-      {:error, msg} when msg in [:game_not_found, :coordinator_not_found] ->
+      {:error, msg} when is_atom(msg) ->
         error_msg = msg |> to_string() |> String.replace("_", " ")
 
         conn
