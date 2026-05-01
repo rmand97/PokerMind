@@ -108,6 +108,45 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
 
       assert length(games) == 5
     end
+
+    test "next_games/2 - next_palyer in coordinator is moved along" do
+      players = ["stine", "rolf"]
+
+      coordinator_id = UUID.uuid4()
+      num_games = 1
+
+      start_supervised!(
+        {Coordinator, name: coordinator_id, num_games: num_games, players: ["stine", "rolf"]}
+      )
+
+      game_id = UUID.uuid4()
+
+      start_supervised!(
+        Supervisor.child_spec(
+          {Game, name: game_id, players: players, coordinator_id: coordinator_id},
+          id: {Game, game_id}
+        )
+      )
+
+      game_state = Game.get_state(game_id)
+      current_player_id = game_state.game.current_player_id
+
+      not_their_turn_player =
+        Enum.find(game_state.game.players, fn player -> player.id != current_player_id end)
+        |> Map.get(:id)
+
+      next_games = Coordinator.next_games(coordinator_id, not_their_turn_player)
+      assert length(next_games) == 0
+
+      {:ok, state} = Game.apply_action(game_id, %{action: :call, player_id: current_player_id})
+      assert state.current_player_id != current_player_id
+
+      next_games = Coordinator.next_games(coordinator_id, state.current_player_id)
+      assert length(next_games) == 1
+
+      next_games = Coordinator.next_games(coordinator_id, current_player_id)
+      assert length(next_games) == 0
+    end
   end
 
   test "can mark game as finished, one game one winner" do

@@ -1,5 +1,6 @@
 defmodule PokerMind.Engine.Actions do
   alias PokerMind.Engine.TableState
+  alias PokerMind.Engine.TableState.PlayerState
 
   def apply_action(%TableState{phase: :game_finished}, _action) do
     {:error, {:game_is_finished, "Game is finished, no more actions can be performed"}}
@@ -51,8 +52,9 @@ defmodule PokerMind.Engine.Actions do
   def apply_action(%TableState{} = state, %{action: :all_in, player_id: player_id})
       when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id) do
-      %{remaining_chips: chips, current_bet: bet} = TableState.get_player(state, player_id)
-      all_in_amount = chips + bet
+      all_in_amount =
+        TableState.get_player(state, player_id)
+        |> PlayerState.all_in_amount()
 
       state
       |> TableState.set_player_value(player_id, :state, :all_in)

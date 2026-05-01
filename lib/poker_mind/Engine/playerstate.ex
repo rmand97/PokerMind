@@ -57,4 +57,8 @@ defmodule PokerMind.Engine.TableState.PlayerState do
       fn _ -> amount end
     )
   end
+
+  def all_in_amount(%__MODULE__{} = player) do
+    player.remaining_chips + player.current_bet
+  end
 end
