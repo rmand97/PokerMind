@@ -1,0 +1,6 @@
+name: local
+variables:
+  - name: host
+    value: http://localhost:4000
+  - name: secret
+    value: test-secret

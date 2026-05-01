@@ -1,23 +1,30 @@
 info:
-  name: GET /next_games rolf
+  name: /next_games
   type: http
   seq: 2
 
 http:
   method: GET
-  url: http://localhost:4000/api/next_games?player_id=rolf&suite_id=e484675c-2886-4834-8db1-bb5a827cb57f
+  url: "{{host}}/api/next_games?player_id=stine&suite_id=e484675c-2886-4834-8db1-bb5a827cb57f"
   headers:
     - name: Content-Type
       value: application/json
-    - name: Authorization
-      value: test-secret
+    - name: authorization
+      value: "{{secret}}"
   params:
     - name: player_id
-      value: rolf
+      value: stine
       type: query
     - name: suite_id
       value: e484675c-2886-4834-8db1-bb5a827cb57f
       type: query
+  body:
+    type: json
+    data: |-
+      {
+        "player_id": "stine",
+        "suite_id": "91f92ffb-516a-4da7-aa2e-7c96848595b1"
+      }
   auth: inherit
 
 settings:

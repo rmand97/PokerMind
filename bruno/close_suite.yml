@@ -1,14 +1,14 @@
 info:
-  name: POST /start_suite
+  name: /close_suite
   type: http
   seq: 5
 
 http:
-  method: POST
-  url: http://localhost:4000/api/start_suite
+  method: DELETE
+  url: "{{host}}/api/start_suite"
   headers:
     - name: authorization
-      value: test-secret
+      value: "{{secret}}"
   body:
     type: json
     data: |-

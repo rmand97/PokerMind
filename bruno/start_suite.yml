@@ -1,21 +1,20 @@
 info:
-  name: POST /action stine
+  name: /start_suite
   type: http
-  seq: 3
+  seq: 4
 
 http:
   method: POST
-  url: http://localhost:4000/api/action
+  url: "{{host}}/api/start_suite"
   headers:
     - name: authorization
-      value: test-secret
+      value: "{{secret}}"
   body:
     type: json
     data: |-
       {
-        "player_id": "stine",
-        "game_id": "e484675c-2886-4834-8db1-bb5a827cb57f-1",
-        "action": "check"
+        "players": ["stine", "rolf"],
+        "num_games": 1
       }
   auth: inherit
 

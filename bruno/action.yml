@@ -1,14 +1,14 @@
 info:
-  name: POST /action rolf
+  name: /action
   type: http
-  seq: 4
+  seq: 3
 
 http:
   method: POST
-  url: http://localhost:4000/api/action
+  url: "{{host}}/api/action"
   headers:
     - name: Authorization
-      value: test-secret
+      value: "{{secret}}"
   body:
     type: json
     data: |-

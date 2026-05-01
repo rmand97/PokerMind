@@ -1,0 +1,6 @@
+name: prod
+variables:
+  - name: host
+    value: https://pokermind.itmindsinternal.dk
+  - name: secret
+    value: CHANGE-ME
