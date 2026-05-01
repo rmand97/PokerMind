@@ -36,6 +36,15 @@ defmodule PokerMind.Engine.Match.Coordinator do
     end)
   end
 
+  def register_next_player(coordinator_id, game_id, next_player) do
+    ensure_exists(coordinator_id, game_id, fn ->
+      GenServer.cast(
+        Engine.Registry.via(coordinator_id, :coordinator),
+        {:register_next_player, game_id, next_player}
+      )
+    end)
+  end
+
   def next_games(coordinator_id, player, amount \\ 10) do
     ensure_exists(coordinator_id, fn ->
       GenServer.call(
@@ -107,6 +116,15 @@ defmodule PokerMind.Engine.Match.Coordinator do
         winner: nil
       })
       |> then(fn s -> Map.put(s, :all_games_ready?, all_games_ready?(s)) end)
+
+    {:noreply, updated_state}
+  end
+
+  @impl true
+  def handle_cast({:register_next_player, game_id, next_player}, state) do
+    updated_state =
+      state
+      |> update_in([:games, game_id], fn game -> %{game | next_player: next_player} end)
 
     {:noreply, updated_state}
   end

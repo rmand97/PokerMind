@@ -85,9 +85,20 @@ defmodule PokerMind.Engine.Match.Game do
             state.id,
             new_game_state.winner
           )
+        else
+          Coordinator.register_next_player(
+            state.coordinator_id,
+            state.id,
+            new_game_state.current_player_id
+          )
         end
 
-        {:reply, {:ok, new_game_state}, %{state | game: new_game_state, finished?: finished?}}
+        {:reply, {:ok, new_game_state},
+         %{
+           state
+           | game: new_game_state,
+             finished?: finished?
+         }}
 
       {:error, _msg} = err ->
         {:reply, err, state}

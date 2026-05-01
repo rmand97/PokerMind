@@ -1,5 +1,6 @@
 defmodule PokerMind.Engine.Actions do
   alias PokerMind.Engine.TableState
+  alias PokerMind.Engine.TableState.PlayerState
 
   def apply_action(%TableState{phase: :game_finished}, _action) do
     {:error, {:game_is_finished, "Game is finished, no more actions can be performed"}}
@@ -41,25 +42,19 @@ defmodule PokerMind.Engine.Actions do
 
   def apply_action(%TableState{} = state, %{action: :check, player_id: player_id})
       when is_binary(player_id) do
-    with :ok <- validate_turn(state, player_id) do
-      player = Enum.find(state.players, &(&1.id == player_id))
-
-      if state.highest_raise != player.current_bet do
-        {:error,
-         {:current_bet_too_low,
-          "Cannot check because your current bet #{player.current_bet} does not match the required highest raise #{state.highest_raise}"}}
-      else
-        state
-        |> advance_player_turn(:check)
-      end
+    with :ok <- validate_turn(state, player_id),
+         :ok <- validate_check(state, player_id) do
+      state
+      |> advance_player_turn(:check)
     end
   end
 
   def apply_action(%TableState{} = state, %{action: :all_in, player_id: player_id})
       when is_binary(player_id) do
     with :ok <- validate_turn(state, player_id) do
-      %{remaining_chips: chips, current_bet: bet} = TableState.get_player(state, player_id)
-      all_in_amount = chips + bet
+      all_in_amount =
+        TableState.get_player(state, player_id)
+        |> PlayerState.all_in_amount()
 
       state
       |> TableState.set_player_value(player_id, :state, :all_in)
@@ -170,6 +165,18 @@ defmodule PokerMind.Engine.Actions do
 
       amount - state.highest_raise >= state.raise_amount ->
         :ok
+    end
+  end
+
+  defp validate_check(state, player_id) do
+    player = TableState.get_player(state, player_id)
+
+    if state.highest_raise != player.current_bet do
+      {:error,
+       {:current_bet_too_low,
+        "Cannot check because your current bet #{player.current_bet} does not match the required highest raise #{state.highest_raise}"}}
+    else
+      :ok
     end
   end
 
