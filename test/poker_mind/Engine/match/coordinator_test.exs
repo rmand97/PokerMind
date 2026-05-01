@@ -271,4 +271,50 @@ defmodule PokerMind.Engine.Match.CoordinatorTest do
                Coordinator.register_game_finished(coordinator_id, game_id, player)
     end
   end
+
+  describe "register_next_player/3" do
+    test "updates the next_player for a game" do
+      coordinator_id = UUID.uuid4()
+      game_id = UUID.uuid4()
+      players = ["rolf", "stine"]
+
+      start_supervised!({Coordinator, name: coordinator_id, num_games: 1, players: players})
+
+      start_supervised!(
+        Supervisor.child_spec(
+          {Game, name: game_id, players: players, coordinator_id: coordinator_id},
+          id: {Game, game_id}
+        )
+      )
+
+      state_before = Coordinator.get_state(coordinator_id)
+      initial_next_player = state_before.games[game_id].next_player
+
+      new_next_player = Enum.find(players, fn p -> p != initial_next_player end)
+
+      assert :ok = Coordinator.register_next_player(coordinator_id, game_id, new_next_player)
+
+      # Give the cast time to process
+      state_after = Coordinator.get_state(coordinator_id)
+      assert state_after.games[game_id].next_player == new_next_player
+    end
+
+    test "returns {:error, :coordinator_not_found} when coordinator does not exist" do
+      coordinator_id = UUID.uuid4()
+      game_id = UUID.uuid4()
+
+      assert {:error, :coordinator_not_found} =
+               Coordinator.register_next_player(coordinator_id, game_id, "rolf")
+    end
+
+    test "returns {:error, :game_not_found} when coordinator exists but game does not" do
+      coordinator_id = UUID.uuid4()
+      game_id = UUID.uuid4()
+
+      start_supervised!({Coordinator, name: coordinator_id, num_games: 1, players: ["rolf"]})
+
+      assert {:error, :game_not_found} =
+               Coordinator.register_next_player(coordinator_id, game_id, "rolf")
+    end
+  end
 end
