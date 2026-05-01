@@ -141,39 +141,6 @@ defmodule PokerMind.Engine.Actions do
     end
   end
 
-  defp validate_call(%TableState{highest_raise: highest_raise} = state, player_id, amount)
-       when is_binary(player_id) and is_integer(amount) do
-    player = TableState.get_player(state, player_id)
-
-    cond do
-      amount != highest_raise ->
-        {:error,
-         {:invalid_call_amount, "Call amount #{amount} must match highest raise #{highest_raise}"}}
-
-      amount == player.current_bet ->
-        {:error,
-         {:use_check_action,
-          "No chips to call (current bet #{player.current_bet} already matches highest raise #{highest_raise}) - use the check action type"}}
-
-      true ->
-        :ok
-    end
-  end
-
-  defp validate_fold(%TableState{players: players}, player_id) do
-    others_still_live =
-      Enum.any?(players, fn p ->
-        p.id != player_id and p.state in [:active_in_hand, :all_in]
-      end)
-
-    if others_still_live do
-      :ok
-    else
-      {:error,
-       {:cannot_fold_last_player, "Cannot fold when no other players are still in the hand"}}
-    end
-  end
-
   defp validate_call(%TableState{highest_raise: highest_raise}, amount) when is_integer(amount) do
     if amount == highest_raise do
       :ok
