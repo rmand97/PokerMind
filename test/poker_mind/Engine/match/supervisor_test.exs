@@ -42,5 +42,25 @@ defmodule PokerMind.Engine.Match.SupervisorTest do
       assert suites[suite1_id] == players1
       assert suites[suite2_id] == players2
     end
+
+    test "" do
+      suite1_id = UUID.uuid4()
+      suite2_id = UUID.uuid4()
+      players1 = ["rolf", "stine"]
+      players2 = ["asbjørn"]
+
+      {:ok, _, ^suite1_id} = MatchSupport.start_match_suite!(suite1_id, players1)
+      {:ok, _, ^suite2_id} = MatchSupport.start_match_suite!(suite2_id, players2)
+
+      on_exit(fn ->
+        MatchSupervisor.close_match_suite(suite1_id)
+        MatchSupervisor.close_match_suite(suite2_id)
+      end)
+
+      suites = MatchSupervisor.all_match_suites()
+
+      assert suites[suite1_id] == players1
+      assert suites[suite2_id] == players2
+    end
   end
 end
