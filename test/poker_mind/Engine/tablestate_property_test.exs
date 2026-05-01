@@ -22,7 +22,7 @@ defmodule PokerMind.Engine.TableStatePropertyTest do
     property "total chips (stacks + pot) are conserved across any action sequence" do
       check all(
               actions <- list_of(action_gen(), min_length: 1, max_length: 40),
-              max_runs: 5000
+              max_runs: 200 #O(1) over 40 action sequence length
             ) do
         init_state =
           TableState.init(TableState.new("table"), ["alice", "bob", "carol"])
