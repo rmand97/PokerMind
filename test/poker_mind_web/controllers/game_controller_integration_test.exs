@@ -392,7 +392,7 @@ defmodule PokerMindWeb.GameControllerIntegrationTest do
   end
 
   defp via_game(game_id) do
-    PokerMind.Engine.Registry.via(game_id)
+    PokerMind.Engine.Registry.via(game_id, :game)
   end
 
   # ------------------------------------------------------------------

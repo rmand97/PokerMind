@@ -6,7 +6,7 @@ defmodule PokerMind.Engine.Match.Suite do
 
   def start_link(args) do
     suite_id = Keyword.fetch!(args, :id)
-    Supervisor.start_link(__MODULE__, args, name: Engine.Registry.via(suite_id))
+    Supervisor.start_link(__MODULE__, args, name: Engine.Registry.via(suite_id, :suite))
   end
 
   # Callbacks

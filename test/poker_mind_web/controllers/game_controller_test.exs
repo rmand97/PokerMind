@@ -319,4 +319,31 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     api_spec = PokerMindWeb.ApiSpec.spec()
     assert_schema(json, "Close Suite Response", api_spec)
   end
+
+  test "No internal server error please", %{conn: conn} do
+    num_games = 1
+    players = ["rolf", "stine", "asbjørn"]
+
+    json =
+      conn
+      |> post("/api/start_suite", %{"players" => players, "num_games" => num_games})
+      |> json_response(200)
+
+    suite_id = json["suite_id"]
+
+    game_id = Game.id(suite_id, 1)
+    current_player = Game.get_state(game_id).game.current_player_id
+
+    conn
+    |> get("/api/next_games", %{"player_id" => current_player, "suite_id" => suite_id})
+    |> json_response(200)
+
+    conn
+    |> post("/api/action", %{
+      "player_id" => current_player,
+      "game_id" => suite_id,
+      "action" => "check"
+    })
+    |> json_response(404)
+  end
 end

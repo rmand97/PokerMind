@@ -8,19 +8,19 @@ defmodule PokerMind.Engine.Match.Game do
 
   def start_link(opts) do
     name = Keyword.fetch!(opts, :name)
-    GenServer.start_link(__MODULE__, opts, name: Engine.Registry.via(name))
+    GenServer.start_link(__MODULE__, opts, name: Engine.Registry.via(name, :game))
   end
 
   def get_state(game_id) do
     ensure_exists(game_id, fn ->
-      GenServer.call(Engine.Registry.via(game_id), :get_state)
+      GenServer.call(Engine.Registry.via(game_id, :game), :get_state)
     end)
   end
 
   def apply_action(game_id, %{action: action_type, player_id: player_id} = action)
       when is_atom(action_type) and is_binary(player_id) do
     ensure_exists(game_id, fn ->
-      GenServer.call(Engine.Registry.via(game_id), {:apply_action, action})
+      GenServer.call(Engine.Registry.via(game_id, :game), {:apply_action, action})
     end)
   end
 
@@ -30,10 +30,9 @@ defmodule PokerMind.Engine.Match.Game do
 
   defp ensure_exists(game_id, fun)
        when is_binary(game_id) and is_function(fun) do
-    if Registry.lookup(PokerMind.Engine.Registry, game_id) == [] do
-      {:error, :game_not_found}
-    else
-      fun.()
+    case Registry.lookup(PokerMind.Engine.Registry, game_id) do
+      [{pid, :game}] when is_pid(pid) -> fun.()
+      _ -> {:error, :game_not_found}
     end
   end
 

@@ -27,7 +27,7 @@ defmodule PokerMind.Engine.Match.SuiteTest do
       assert {:ok, _suite_pid, id} = MatchSupervisor.start_match_suite(suite_id, ["stine"])
       on_exit(fn -> MatchSupervisor.close_match_suite(id) end)
 
-      assert [{coordinator_pid, nil}] =
+      assert [{coordinator_pid, :coordinator}] =
                Registry.lookup(PokerMind.Engine.Registry, Coordinator.id(id))
 
       assert is_pid(coordinator_pid)

@@ -5,12 +5,12 @@ defmodule PokerMind.Engine.Match.Coordinator do
 
   def start_link(opts) do
     name = Keyword.fetch!(opts, :name)
-    GenServer.start_link(__MODULE__, opts, name: Engine.Registry.via(name))
+    GenServer.start_link(__MODULE__, opts, name: Engine.Registry.via(name, :coordinator))
   end
 
   def get_state(coordinator_id) do
     ensure_exists(coordinator_id, fn ->
-      GenServer.call(Engine.Registry.via(coordinator_id), :get_state)
+      GenServer.call(Engine.Registry.via(coordinator_id, :coordinator), :get_state)
     end)
   end
 
@@ -20,14 +20,17 @@ defmodule PokerMind.Engine.Match.Coordinator do
 
   def register_game_ready(coordinator_id, game_id, starting_player) do
     ensure_exists(coordinator_id, game_id, fn ->
-      GenServer.cast(Engine.Registry.via(coordinator_id), {:ready, game_id, starting_player})
+      GenServer.cast(
+        Engine.Registry.via(coordinator_id, :coordinator),
+        {:ready, game_id, starting_player}
+      )
     end)
   end
 
   def register_game_finished(coordinator_id, game_id, winning_player) do
     ensure_exists(coordinator_id, game_id, fn ->
       GenServer.cast(
-        Engine.Registry.via(coordinator_id),
+        Engine.Registry.via(coordinator_id, :coordinator),
         {:game_finished, game_id, winning_player}
       )
     end)
@@ -35,7 +38,10 @@ defmodule PokerMind.Engine.Match.Coordinator do
 
   def next_games(coordinator_id, player, amount \\ 10) do
     ensure_exists(coordinator_id, fn ->
-      GenServer.call(Engine.Registry.via(coordinator_id), {:next_games, player, amount})
+      GenServer.call(
+        Engine.Registry.via(coordinator_id, :coordinator),
+        {:next_games, player, amount}
+      )
     end)
   end
 
