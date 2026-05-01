@@ -41,17 +41,10 @@ defmodule PokerMind.Engine.Actions do
 
   def apply_action(%TableState{} = state, %{action: :check, player_id: player_id})
       when is_binary(player_id) do
-    with :ok <- validate_turn(state, player_id) do
-      player = Enum.find(state.players, &(&1.id == player_id))
-
-      if state.highest_raise != player.current_bet do
-        {:error,
-         {:current_bet_too_low,
-          "Cannot check because your current bet #{player.current_bet} does not match the required highest raise #{state.highest_raise}"}}
-      else
-        state
-        |> advance_player_turn(:check)
-      end
+    with :ok <- validate_turn(state, player_id),
+         :ok <- validate_check(state, player_id) do
+      state
+      |> advance_player_turn(:check)
     end
   end
 
@@ -170,6 +163,18 @@ defmodule PokerMind.Engine.Actions do
 
       amount - state.highest_raise >= state.raise_amount ->
         :ok
+    end
+  end
+
+  defp validate_check(state, player_id) do
+    player = TableState.get_player(state, player_id)
+
+    if state.highest_raise != player.current_bet do
+      {:error,
+       {:current_bet_too_low,
+        "Cannot check because your current bet #{player.current_bet} does not match the required highest raise #{state.highest_raise}"}}
+    else
+      :ok
     end
   end
 
