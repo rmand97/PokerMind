@@ -189,7 +189,7 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     # Close suite
     conn
     |> delete("/api/close_suite", %{
-      "id" => suite_id
+      "suite_id" => suite_id
     })
     |> json_response(200)
 
@@ -312,7 +312,7 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     json =
       conn
       |> delete("/api/close_suite", %{
-        "id" => suite_id
+        "suite_id" => suite_id
       })
       |> json_response(200)
 

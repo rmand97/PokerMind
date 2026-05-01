@@ -71,7 +71,7 @@ defmodule PokerMindWeb.GameController do
     ]
   )
 
-  def close_suite(conn, %{"id" => suite_id}) do
+  def close_suite(conn, %{"suite_id" => suite_id}) do
     case MatchSupervisor.close_match_suite(suite_id) do
       :ok ->
         json(conn, %{})
