@@ -341,13 +341,6 @@ defmodule PokerMind.Engine.TableState do
     # Fold the forfeit into the topmost raw pot — it goes to whoever wins the
     # layer at the highest in-hand cap, exactly as if the folder had checked
     # down.
-    max_in_hand_cap = List.last(layers) || 0
-
-    folded_overbet =
-      players
-      |> Enum.filter(&(&1.state not in [:active_in_hand, :all_in]))
-      |> Enum.map(&max(0, &1.total_contributed - max_in_hand_cap))
-      |> Enum.sum()
 
     {raw_pots, _} =
       Enum.map_reduce(layers, 0, fn layer, prev_layer ->
@@ -363,6 +356,17 @@ defmodule PokerMind.Engine.TableState do
 
         {%{amount: amount, eligible_ids: eligible_player_ids}, layer}
       end)
+
+    # Folded players' contributions above the highest in-hand cap would
+    # otherwise be silently dropped (no layer captures them, no refund).
+    # Forfeit them into the topmost raw pot so chip totals are preserved.
+    max_in_hand_cap = List.last(layers) || 0
+
+    folded_overbet =
+      players
+      |> Enum.filter(&(&1.state not in [:active_in_hand, :all_in]))
+      |> Enum.map(&max(0, &1.total_contributed - max_in_hand_cap))
+      |> Enum.sum()
 
     raw_pots =
       case raw_pots do
