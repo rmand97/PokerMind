@@ -60,7 +60,7 @@ defmodule PokerMind.Engine.TableState do
   defp add_player(%__MODULE__{} = state, new_player_id)
        when is_binary(new_player_id)
        when is_list(state.players) do
-    new_player = PlayerState.new(new_player_id, 10_000)
+    new_player = PlayerState.new(new_player_id, 100_000)
 
     Map.put(state, :players, [new_player | state.players])
   end
