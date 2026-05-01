@@ -8,13 +8,15 @@ defmodule PokerMindWeb.Schemas do
       type: :object,
       properties: %{
         rank: %Schema{
-          type: :integer.
-          description: "Card rank (1-13). Ace = 1, Jack = 11, Queen = 12, King = 13"}
-          enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+          type: :integer,
+          description: "Card rank (1-13). Ace = 1, Jack = 11, Queen = 12, King = 13",
+          enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+        },
         suit: %Schema{
           type: :string,
           description: "Card suit",
-          enum: ["clubs", "diamonds", "hearts", "spades"]}
+          enum: ["clubs", "diamonds", "hearts", "spades"]
+        }
       },
       required: [:rank, :suit]
     })
@@ -166,8 +168,12 @@ defmodule PokerMindWeb.Schemas do
         action: %Schema{
           type: :string,
           description: "Action to perform",
-          enum: ["fold", "check", "call", "raise", "all_in"]},
-        amount: %Schema{type: :integer, description: "Required when action is raise. Provide the total amount to raise to."}
+          enum: ["fold", "check", "call", "raise", "all_in"]
+        },
+        amount: %Schema{
+          type: :integer,
+          description: "Required when action is raise. Provide the total amount to raise to."
+        }
       },
       required: [:player_id, :game_id, :action]
     })
