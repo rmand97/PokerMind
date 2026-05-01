@@ -7,8 +7,14 @@ defmodule PokerMindWeb.Schemas do
     OpenApiSpex.schema(%{
       type: :object,
       properties: %{
-        rank: %Schema{type: :integer},
-        suit: %Schema{type: :string}
+        rank: %Schema{
+          type: :integer.
+          description: "Card rank (1-13). Ace = 1, Jack = 11, Queen = 12, King = 13"}
+          enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+        suit: %Schema{
+          type: :string,
+          description: "Card suit",
+          enum: ["clubs", "diamonds", "hearts", "spades"]}
       },
       required: [:rank, :suit]
     })
