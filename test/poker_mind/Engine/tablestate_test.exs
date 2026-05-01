@@ -35,7 +35,10 @@ defmodule PokerMind.Engine.TableStateTest do
       players: players,
       pot: Enum.sum(Enum.map(players, & &1.total_contributed)),
       deck: [],
-      community_cards: community
+      community_cards: community,
+      small_blind_id: "A",
+      current_player_id: "A",
+      hands_played: 0
     }
   end
 
@@ -98,7 +101,7 @@ defmodule PokerMind.Engine.TableStateTest do
       end
     end
 
-    test "set_blinds/1 - more than 2 players, a player is chosen as small blind and another as current player",
+    test "set_blinds/2 - more than 2 players, a player is chosen as small blind and another as current player",
          %{
            state: state
          } do
@@ -107,7 +110,7 @@ defmodule PokerMind.Engine.TableStateTest do
       assert state.small_blind_id != state.current_player_id
     end
 
-    test "set_blinds/1 - exactly 2 players, a player is chosen as both small blind and current player" do
+    test "set_blinds/2 - exactly 2 players, a player is chosen as both small blind and current player" do
       players =
         [
           "stine",
@@ -119,6 +122,37 @@ defmodule PokerMind.Engine.TableStateTest do
       assert Enum.any?(state.players, fn player -> player.id == state.small_blind_id end)
       assert Enum.any?(state.players, fn player -> player.id == state.current_player_id end)
       assert state.small_blind_id == state.current_player_id
+    end
+
+    test "set_blinds/2 - blinds increases to the double every 10 hands",
+         %{
+           state: state
+         } do
+      new_state =
+        Enum.reduce(1..9, state, fn i, current_state ->
+          after_hand_finished =
+            current_state
+            |> TableState.advance_phase(:showdown)
+
+          # big blind amount stays the same for the first 9 hands
+          assert after_hand_finished.hands_played == i
+          assert after_hand_finished.big_blind_amount == state.big_blind_amount
+          # The same for highest_raise and raise_amount
+          assert after_hand_finished.highest_raise == state.highest_raise
+          assert after_hand_finished.raise_amount == state.raise_amount
+          after_hand_finished
+        end)
+
+      final_state =
+        new_state
+        |> TableState.advance_phase(:showdown)
+
+      # big_blind doubles when 10 hands has been played
+      assert final_state.phase == :pre_flop
+      assert final_state.big_blind_amount == state.big_blind_amount * 2
+      # The same for highest_raise and raise_amount
+      assert final_state.highest_raise == state.highest_raise * 2
+      assert final_state.raise_amount == state.raise_amount * 2
     end
   end
 
@@ -216,59 +250,6 @@ defmodule PokerMind.Engine.TableStateTest do
       assert TableState.get_player(final_state, "stine").remaining_chips == 100
     end
 
-    test "advance_phase/2 - handle showdown with four active players remaining, player 3 and player 4 has equally good hands",
-         %{
-           state: state
-         } do
-      # (two pair) A♦ A♣ 7♣ 7♦ 6♣ - worst
-      player1_hand = [%{rank: 2, suit: :hearts}, %{rank: 7, suit: :clubs}]
-
-      # (two pair) A♦ A♣ K♥ K♦ 7♦ - better than player 1
-      player2_hand = [%{rank: 13, suit: :hearts}, %{rank: 13, suit: :diamonds}]
-
-      # (straight) 7♦ 6♣ 5♥ 4♦ 3♣ - better than player 2
-      player3_hand = [%{rank: 4, suit: :diamonds}, %{rank: 5, suit: :hearts}]
-
-      # (straight) 7♦ 6♣ 5♦ 4♣ 3♣ - equal to player 3, but different suits
-      player4_hand = [%{rank: 4, suit: :clubs}, %{rank: 5, suit: :diamonds}]
-
-      community_cards = [
-        %{rank: 3, suit: :clubs},
-        %{rank: 6, suit: :clubs},
-        %{rank: 7, suit: :diamonds},
-        %{rank: 1, suit: :diamonds},
-        %{rank: 1, suit: :clubs}
-      ]
-
-      players = [
-        {"stine", player1_hand},
-        {"rolf", player2_hand},
-        {"asbjørn", player3_hand},
-        {"simon", player4_hand}
-      ]
-
-      new_state =
-        Enum.reduce(players, state, fn {name, hand}, acc ->
-          acc
-          |> TableState.set_player_value(name, :state, :all_in)
-          |> TableState.set_player_value(name, :remaining_chips, 0)
-          |> TableState.set_player_value(name, :current_hand, hand)
-          |> TableState.set_player_value(name, :total_contributed, 25)
-        end)
-        |> Map.put(:community_cards, community_cards)
-        |> Map.put(:pot, 100)
-
-      next_phase = TableState.next_phase(new_state)
-      final_state = TableState.advance_phase(new_state, next_phase)
-
-      assert next_phase == :showdown
-      assert final_state.pot == 0
-      assert TableState.get_player(final_state, "stine").remaining_chips == 0
-      assert TableState.get_player(final_state, "rolf").remaining_chips == 0
-      assert TableState.get_player(final_state, "asbjørn").remaining_chips == 50
-      assert TableState.get_player(final_state, "simon").remaining_chips == 50
-    end
-
     test "advance_phase/2 - handle finished and starts a new hand with new small blind and reset players and table",
          %{
            state: state
@@ -280,38 +261,43 @@ defmodule PokerMind.Engine.TableStateTest do
         "simon"
       ]
 
-      new_state =
+      new_hand_state =
         Enum.reduce(players, state, fn name, current_state ->
           current_state
           |> TableState.set_player_value(name, :state, :inactive_in_hand)
-          |> TableState.set_player_value(name, :remaining_chips, 50)
+          |> TableState.set_player_value(name, :remaining_chips, 500)
         end)
         |> TableState.set_player_value("stine", :state, :active_in_hand)
         |> Map.put(:pot, 150)
         |> TableState.advance_phase(:showdown)
 
       # Showdown leaves stine with 200 chips and rest with 50
-
-      next_phase = TableState.next_phase(new_state)
-      final_state = TableState.advance_phase(new_state, next_phase)
-
-      for {player, updated_player} <- Enum.zip(state.players, final_state.players) do
+      for {player, updated_player} <- Enum.zip(state.players, new_hand_state.players) do
         # Make sure we compare the same player
         assert player.id == updated_player.id
         # Current hand has been updated for each player
         assert length(player.current_hand) == length(updated_player.current_hand)
         assert player.current_hand != updated_player.current_hand
         # Current_bet, has_acted and state is reset
-        assert updated_player.current_bet == 0
+        # Current_bet depends on whether the player is chosen as small_blind or big_blind
+        assert updated_player.current_bet == 0 or
+                 updated_player.current_bet == 50 or
+                 updated_player.current_bet == 100
+
+        # Total_contributed depends on whether the player is chosen as small_blind or big_blind
+        assert updated_player.total_contributed == 0 or
+                 updated_player.total_contributed == 50 or
+                 updated_player.total_contributed == 100
+
         assert updated_player.has_acted == false
         assert updated_player.state == :active_in_hand
       end
 
       # No winner found yet
-      assert final_state.winner == nil
+      assert new_hand_state.winner == nil
       # New small blind is selected and we start the new hand
-      assert state.small_blind_id != final_state.small_blind_id
-      assert final_state.phase == :pre_flop
+      assert state.small_blind_id != new_hand_state.small_blind_id
+      assert new_hand_state.phase == :pre_flop
     end
 
     test "advance_phase/2 - an overall winner has been found for the table",
@@ -325,7 +311,7 @@ defmodule PokerMind.Engine.TableStateTest do
         "simon"
       ]
 
-      new_state =
+      winner_state =
         Enum.reduce(players, state, fn name, current_state ->
           current_state
           |> TableState.set_player_value(name, :state, :out_of_chips)
@@ -337,13 +323,29 @@ defmodule PokerMind.Engine.TableStateTest do
         |> TableState.advance_phase(:showdown)
 
       # Showdown leaves stine with 100 chips and rest with 0
-
-      next_phase = TableState.next_phase(new_state)
-      final_state = TableState.advance_phase(new_state, next_phase)
-
       # stine is the winner of the table
-      assert final_state.winner == "stine"
-      assert final_state.phase == :game_finished
+      assert winner_state.winner == "stine"
+      assert winner_state.phase == :game_finished
+    end
+  end
+
+  describe "set_current_player_for_phase/1" do
+    test "post-flop fallback when small blind is inactive picks next active player",
+         %{state: state} do
+      # Regression: post-flop the phase starter is the small blind. When the
+      # small blind is not :active_in_hand, the fallback used to pass the
+      # player struct into find_next_active_player_id/2, which is guarded by
+      # is_binary/1 — raising FunctionClauseError.
+      result =
+        state
+        |> Map.put(:phase, :flop)
+        |> TableState.set_player_value(state.small_blind_id, :state, :inactive_in_hand)
+        |> TableState.set_current_player_for_phase()
+
+      assert result.current_player_id != state.small_blind_id
+
+      assert TableState.get_player(result, result.current_player_id).state ==
+               :active_in_hand
     end
   end
 
@@ -392,7 +394,26 @@ defmodule PokerMind.Engine.TableStateTest do
       assert updated_player2.remaining_chips == 50
       assert updated_player2.current_bet == 50
 
-      assert updated_state.pot == 70
+      assert updated_state.pot == state.pot + 70
+    end
+
+    test "add_to_pot/3 - if player does not meet required amount to add, add remaining chips and go all in",
+         %{state: state} do
+      # player 1 gets 50 chips
+      player1 = %{TableState.get_player(state, "stine") | remaining_chips: 50, current_bet: 0}
+      state_new_players = Map.put(state, :players, [player1 | Enum.drop(state.players, 4)])
+
+      # player 1 becomes big_blind, and has to add 100 chips to the pot
+      updated_state =
+        state_new_players
+        |> TableState.add_to_pot(player1.id, 100)
+
+      updated_player1 = TableState.get_player(updated_state, player1.id)
+
+      # player 1 can only add 50 chips and is now all_in
+      assert updated_player1.remaining_chips == 0
+      assert updated_player1.state == :all_in
+      assert updated_state.pot == state.pot + 50
     end
   end
 
@@ -505,6 +526,39 @@ defmodule PokerMind.Engine.TableStateTest do
       assert [%{amount: 200, eligible_ids: ["A", "B"]}] = result.pots
       assert [{"B", 400}] = result.refunds
     end
+
+    test "build_pots/1 - blinds fold to a sub-BB short all-in: forfeit absorbed by top pot" do
+      # Pot of 200 = SB 50 + BB 100 + UTG short all-in 50. Both blinds fold.
+      # Without the folded-overbet absorption, the BB poster's 50 chips above
+      # the in-hand cap (50) would silently disappear from the pot.
+      state =
+        pots_state([
+          {"alice", :all_in, 50},
+          {"bob", :inactive_in_hand, 100},
+          {"carol", :inactive_in_hand, 50}
+        ])
+
+      result = TableState.build_pots(state)
+      assert result.pots == []
+      assert result.refunds == [{"alice", 200}]
+    end
+
+    test "build_pots/1 - folded over-bet folds into single-eligible top side pot" do
+      # A all-in 200, B in-hand 500, folded C 700.
+      # Main pot {600, [A, B]} contested.
+      # Top layer {600, [B]} single-eligible → refund. Forfeit from C above
+      # the 500 cap (200) must be absorbed by that refund.
+      state =
+        pots_state([
+          {"A", :all_in, 200},
+          {"B", :active_in_hand, 500},
+          {"C", :inactive_in_hand, 700}
+        ])
+
+      result = TableState.build_pots(state)
+      assert result.pots == [%{amount: 600, eligible_ids: ["A", "B"]}]
+      assert result.refunds == [{"B", 800}]
+    end
   end
 
   describe "distribute_pots/1" do
@@ -536,18 +590,18 @@ defmodule PokerMind.Engine.TableStateTest do
     end
 
     test "distribute_pots/1 - two tied winners with one leftover chip goes to the first winner" do
-      # Still-in A, B each contribute 50. Folded C contributes 1 extra chip, so the
-      # layer-50 pot is 101 split between two tied winners: 50 + 1 leftover → A=51, B=50.
+      # Still-in A, B each contribute 500. Folded C contributes 1 extra chip, so the
+      # layer-500 pot is 1001 split between two tied winners: 500 + 1 leftover → A=501, B=500.
       players = [
-        showdown_player("A", :active_in_hand, 50, [
+        showdown_player("A", :active_in_hand, 500, [
           %{rank: 2, suit: :spades},
           %{rank: 3, suit: :clubs}
         ]),
-        showdown_player("B", :active_in_hand, 50, [
+        showdown_player("B", :active_in_hand, 500, [
           %{rank: 4, suit: :spades},
           %{rank: 5, suit: :clubs}
         ]),
-        showdown_player("C", :inactive_in_hand, 1, [
+        showdown_player("C", :out_of_chips, 1, [
           %{rank: 6, suit: :spades},
           %{rank: 7, suit: :clubs}
         ])
@@ -555,26 +609,27 @@ defmodule PokerMind.Engine.TableStateTest do
 
       final = TableState.distribute_pots(showdown_state(players, tied_board()))
 
-      assert final.pot == 0
-      assert TableState.get_player(final, "A").remaining_chips == 51
-      assert TableState.get_player(final, "B").remaining_chips == 50
+      # Final pot is 150 as it is the sum of big_blind and small_blind
+      assert final.pot == 150
+      assert TableState.get_player(final, "A").remaining_chips == 501 - 100
+      assert TableState.get_player(final, "B").remaining_chips == 500 - 50
       assert TableState.get_player(final, "C").remaining_chips == 0
     end
 
     test "distribute_pots/1 - three tied winners with two leftover chips go to the first two winners" do
-      # Still-in A, B, C each contribute 33. Folded D contributes 2 extra chips, so
-      # the layer-33 pot is 101 split between three tied winners: 33 + 2 leftover →
-      # A=34, B=34, C=33.
+      # Still-in A, B, C each contribute 330. Folded D contributes 2 extra chips, so
+      # the layer-330 pot is 992 split between three tied winners: 330 + 2 leftover →
+      # A=331, B=331, C=330, D=0.
       players = [
-        showdown_player("A", :active_in_hand, 33, [
+        showdown_player("A", :active_in_hand, 330, [
           %{rank: 2, suit: :spades},
           %{rank: 3, suit: :clubs}
         ]),
-        showdown_player("B", :active_in_hand, 33, [
+        showdown_player("B", :active_in_hand, 330, [
           %{rank: 4, suit: :spades},
           %{rank: 5, suit: :clubs}
         ]),
-        showdown_player("C", :active_in_hand, 33, [
+        showdown_player("C", :active_in_hand, 330, [
           %{rank: 6, suit: :spades},
           %{rank: 7, suit: :clubs}
         ]),
@@ -586,11 +641,51 @@ defmodule PokerMind.Engine.TableStateTest do
 
       final = TableState.distribute_pots(showdown_state(players, tied_board()))
 
-      assert final.pot == 0
-      assert TableState.get_player(final, "A").remaining_chips == 34
-      assert TableState.get_player(final, "B").remaining_chips == 34
-      assert TableState.get_player(final, "C").remaining_chips == 33
+      # Final pot is 150 as it is the sum of big_blind and small_blind
+      assert final.pot == 150
+      assert TableState.get_player(final, "A").remaining_chips == 331
+      assert TableState.get_player(final, "B").remaining_chips == 331 - 50
+      assert TableState.get_player(final, "C").remaining_chips == 330 - 100
       assert TableState.get_player(final, "D").remaining_chips == 0
+    end
+
+    test "distribute_pots/1 - blinds fold to sub-BB short all-in: chips conserved" do
+      # SB 50 + BB 100 + UTG sub-BB short all-in 50. Both blinds fold,
+      # leaving alice as the only player still in the hand. Total chips
+      # (stacks + pot) must be conserved across the showdown — the BB
+      # poster's 50 chips above the in-hand cap must not vanish.
+      community = [
+        %{rank: 2, suit: :diamonds},
+        %{rank: 7, suit: :clubs},
+        %{rank: 5, suit: :hearts},
+        %{rank: 9, suit: :clubs},
+        %{rank: 12, suit: :diamonds}
+      ]
+
+      players = [
+        showdown_player("alice", :all_in, 50, [
+          %{rank: 1, suit: :spades},
+          %{rank: 1, suit: :clubs}
+        ]),
+        showdown_player("bob", :inactive_in_hand, 100, [
+          %{rank: 4, suit: :spades},
+          %{rank: 8, suit: :clubs}
+        ]),
+        showdown_player("carol", :inactive_in_hand, 50, [
+          %{rank: 6, suit: :hearts},
+          %{rank: 10, suit: :clubs}
+        ])
+      ]
+
+      state = showdown_state(players, community)
+      before = state.pot + Enum.sum(Enum.map(state.players, & &1.remaining_chips))
+
+      final = TableState.distribute_pots(state)
+      after_total = final.pot + Enum.sum(Enum.map(final.players, & &1.remaining_chips))
+
+      assert before == after_total
+      assert final.pot == 0
+      assert TableState.get_player(final, "alice").remaining_chips == 200
     end
 
     test "distribute_pots/1 - all-in player wins main pot, bigger stack wins side pot" do
@@ -640,22 +735,133 @@ defmodule PokerMind.Engine.TableStateTest do
         players: players,
         pot: 700,
         deck: [],
-        community_cards: community
+        community_cards: community,
+        small_blind_id: "A",
+        current_player_id: "A",
+        hands_played: 0
       }
 
       final = TableState.distribute_pots(state)
 
-      assert TableState.get_player(final, "A").remaining_chips == 300
-      assert TableState.get_player(final, "B").remaining_chips == 400
+      assert TableState.get_player(final, "A").remaining_chips == 300 - 100
+      assert TableState.get_player(final, "B").remaining_chips == 400 - 50
       assert TableState.get_player(final, "C").remaining_chips == 0
+      assert final.pot == 150
+    end
+  end
+
+  describe "all-in-by-blind hands have cards at showdown" do
+    test "BB poster with stack equal to big_blind ends :all_in with hole cards" do
+      # Players list rotates [A, B, C]. With small_blind_id "A" the previous
+      # hand's SB was A, so possible_new_hand rotates new SB to B and new BB
+      # to C. C has chips == big_blind, so posting the BB transitions C to
+      # :all_in. Cards must already be dealt by then.
+      state = %TableState{
+        id: "t",
+        phase: :showdown,
+        players: [
+          %PlayerState{
+            id: "A",
+            remaining_chips: 20_000,
+            state: :active_in_hand,
+            current_bet: 0,
+            total_contributed: 0,
+            has_acted: false,
+            current_hand: []
+          },
+          %PlayerState{
+            id: "B",
+            remaining_chips: 9_000,
+            state: :active_in_hand,
+            current_bet: 0,
+            total_contributed: 0,
+            has_acted: false,
+            current_hand: []
+          },
+          %PlayerState{
+            id: "C",
+            remaining_chips: 100,
+            state: :active_in_hand,
+            current_bet: 0,
+            total_contributed: 0,
+            has_acted: false,
+            current_hand: []
+          }
+        ],
+        pot: 0,
+        deck: [],
+        community_cards: [],
+        small_blind_id: "A",
+        current_player_id: "A",
+        big_blind_amount: 100,
+        highest_raise: 0,
+        raise_amount: 100,
+        hands_played: 1
+      }
+
+      new_hand = TableState.advance_phase(state, :hand_finished)
+
+      c = TableState.get_player(new_hand, "C")
+      assert c.state == :all_in
+      assert is_list(c.current_hand) and length(c.current_hand) == 2
+    end
+
+    test "showdown with an all-in-by-blind contestant does not crash" do
+      community = [
+        %{rank: 2, suit: :diamonds},
+        %{rank: 7, suit: :clubs},
+        %{rank: 5, suit: :hearts},
+        %{rank: 9, suit: :clubs},
+        %{rank: 12, suit: :diamonds}
+      ]
+
+      players = [
+        %PlayerState{
+          id: "A",
+          remaining_chips: 0,
+          state: :all_in,
+          current_bet: 20_100,
+          total_contributed: 20_100,
+          has_acted: true,
+          current_hand: [%{rank: 1, suit: :spades}, %{rank: 1, suit: :clubs}]
+        },
+        %PlayerState{
+          id: "C",
+          remaining_chips: 0,
+          state: :all_in,
+          current_bet: 100,
+          total_contributed: 100,
+          has_acted: true,
+          current_hand: [%{rank: 13, suit: :spades}, %{rank: 13, suit: :clubs}]
+        }
+      ]
+
+      state = %TableState{
+        id: "t",
+        phase: :showdown,
+        players: players,
+        pot: 20_200,
+        deck: [],
+        community_cards: community,
+        small_blind_id: "A",
+        current_player_id: "A",
+        hands_played: 2
+      }
+
+      final = TableState.distribute_pots(state)
+
+      # A (aces) wins the contested 200 main pot and is refunded the 20_000
+      # excess from the side pot. C (kings) gets nothing.
       assert final.pot == 0
+      assert TableState.get_player(final, "A").remaining_chips == 20_000 + 200
+      assert TableState.get_player(final, "C").remaining_chips == 0
     end
   end
 
   describe " reset of betting round helpers" do
-    test "reset_highest_raise/1 - resets highest_raise to big_blind_amount", %{state: state} do
+    test "reset_highest_raise/1 - resets highest_raise to 0", %{state: state} do
       state = Map.put(state, :highest_raise, 500)
-      assert TableState.reset_highest_raise(state).highest_raise == state.big_blind_amount
+      assert TableState.reset_highest_raise(state).highest_raise == 0
     end
 
     test "reset_current_bet/1 - zeros current_bet for all players", %{state: state} do

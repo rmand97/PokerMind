@@ -33,6 +33,8 @@ defmodule PokerMindWeb.Router do
     get "/next_games", PokerMindWeb.GameController, :next_games
     get "/suites", PokerMindWeb.GameController, :suites
     post "/action", PokerMindWeb.GameController, :perform_action
+    post "/start_suite", PokerMindWeb.GameController, :start_suite
+    delete "/close_suite", PokerMindWeb.GameController, :close_suite
   end
 
   scope "/api" do

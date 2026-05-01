@@ -6,7 +6,7 @@ defmodule PokerMind.Engine.TableState do
   defstruct [
     # table-id
     :id,
-    # :pre_flop | :flop | :turn | :river | :showdown
+    # :pre_flop | :flop | :turn | :river | :showdown | :game_finished | :hand_finished
     :phase,
     # list of %TableState.PlayerState{} structs
     :players,
@@ -23,7 +23,9 @@ defmodule PokerMind.Engine.TableState do
     # bet to match
     :highest_raise,
     :big_blind_amount,
-    :winner
+    :raise_amount,
+    :winner,
+    :hands_played
   ]
 
   def new(id) when is_binary(id) do
@@ -34,7 +36,8 @@ defmodule PokerMind.Engine.TableState do
       players: [],
       pot: 0,
       deck: [],
-      community_cards: []
+      community_cards: [],
+      hands_played: 0
     }
   end
 
@@ -42,8 +45,8 @@ defmodule PokerMind.Engine.TableState do
     state
     |> initialize_players(init_players)
     |> new_deck()
-    |> set_blinds()
     |> deal_cards()
+    |> set_blinds()
   end
 
   defp initialize_players(%__MODULE__{} = state, []) do
@@ -57,7 +60,7 @@ defmodule PokerMind.Engine.TableState do
   defp add_player(%__MODULE__{} = state, new_player_id)
        when is_binary(new_player_id)
        when is_list(state.players) do
-    new_player = PlayerState.new(new_player_id, 1000)
+    new_player = PlayerState.new(new_player_id, 10_000)
 
     Map.put(state, :players, [new_player | state.players])
   end
@@ -75,7 +78,6 @@ defmodule PokerMind.Engine.TableState do
     %__MODULE__{state | players: updated_players}
   end
 
-  # TODO: update with setting blinds and deducting chips from players
   defp set_blinds(%__MODULE__{} = state, new_table \\ true) when is_boolean(new_table) do
     new_state =
       if new_table do
@@ -85,12 +87,20 @@ defmodule PokerMind.Engine.TableState do
         advance_player(state, :small_blind_id, state.small_blind_id)
       end
 
-    big_blind = 100
+    base_blind = 100
+    increase_every = 10
+    big_blind = base_blind * 2 ** div(state.hands_played, increase_every)
 
     new_state
     |> Map.put(:highest_raise, big_blind)
     |> Map.put(:big_blind_amount, big_blind)
+    |> Map.put(:raise_amount, big_blind)
+    |> add_to_pot(new_state.small_blind_id, div(big_blind, 2))
     |> advance_player(:current_player_id, new_state.small_blind_id)
+    |> then(fn state ->
+      big_blind_id = state.current_player_id
+      add_to_pot(state, big_blind_id, big_blind)
+    end)
     |> advance_player()
   end
 
@@ -108,8 +118,11 @@ defmodule PokerMind.Engine.TableState do
     index = Enum.find_index(state.players, fn p -> p.id == from_player_id end)
     next_player = Enum.at(state.players, rem(index + 1, length(state.players)))
 
-    state
-    |> Map.put(key, next_player.id)
+    if next_player.state in [:active_in_hand] do
+      state |> Map.put(key, next_player.id)
+    else
+      advance_player(state, key, next_player.id)
+    end
   end
 
   defp new_deck(%__MODULE__{} = state) do
@@ -195,8 +208,8 @@ defmodule PokerMind.Engine.TableState do
       case state.phase do
         # if pre_flop bb+1 goes first. if he is inactive -> pick next active
         :pre_flop ->
-          after_small_blind_id = find_next_active_player(state, state.small_blind_id)
-          after_big_blind_id = find_next_active_player(state, after_small_blind_id)
+          after_small_blind_id = find_next_active_player_id(state, state.small_blind_id)
+          after_big_blind_id = find_next_active_player_id(state, after_small_blind_id)
           after_big_blind_id
 
         _post_flop ->
@@ -207,20 +220,20 @@ defmodule PokerMind.Engine.TableState do
     start_from_player = get_player(state, start_from_id)
 
     # check if inactive pick next active
-    start_from_player =
+    start_from_player_id =
       if start_from_player.state == :active_in_hand do
-        start_from_player
+        start_from_player.id
         # if inactive pick next active
       else
-        find_next_active_player(state, start_from_player.id)
+        find_next_active_player_id(state, start_from_player.id)
       end
 
-    %{state | current_player_id: start_from_player.id}
+    %{state | current_player_id: start_from_player_id}
   end
 
-  def round_complete?(%__MODULE__{players: players}) do
+  def round_complete?(%__MODULE__{} = state) do
     active_players =
-      Enum.filter(players, fn player ->
+      Enum.filter(state.players, fn player ->
         player.state == :active_in_hand
       end)
 
@@ -229,12 +242,16 @@ defmodule PokerMind.Engine.TableState do
     end)
   end
 
-  def find_next_active_player(%__MODULE__{players: players}, from_player_id)
+  def find_next_active_player_id(%__MODULE__{} = state, from_player_id)
       when is_binary(from_player_id) do
-    players_to_consider = acting_order_from(players, from_player_id)
+    players_to_consider = acting_order_from(state.players, from_player_id)
 
     players_to_consider
     |> Enum.find(fn player -> player.state == :active_in_hand end)
+    |> case do
+      nil -> nil
+      player -> player.id
+    end
   end
 
   defp acting_order_from(players, from_player_id) when is_binary(from_player_id) do
@@ -268,16 +285,25 @@ defmodule PokerMind.Engine.TableState do
       when is_integer(amount) and amount > 0 do
     amount_difference = amount - get_player(state, player_id).current_bet
     player_contribution = get_player(state, player_id).total_contributed
+    player = get_player(state, player_id)
 
-    state
+    {updated_state, amount_to_add} =
+      if amount_difference >= player.remaining_chips do
+        state = set_player_value(state, player.id, :state, :all_in)
+        {state, player.remaining_chips}
+      else
+        {state, amount_difference}
+      end
+
+    updated_state
     |> set_player_value(
       player_id,
       :total_contributed,
-      player_contribution + amount_difference
+      player_contribution + amount_to_add
     )
-    |> PlayerState.deduct_chips(player_id, amount_difference)
+    |> PlayerState.deduct_chips(player_id, amount_to_add)
     |> PlayerState.update_current_bet(player_id, amount)
-    |> Map.put(:pot, state.pot + amount_difference)
+    |> Map.put(:pot, updated_state.pot + amount_to_add)
   end
 
   @doc """
@@ -308,6 +334,21 @@ defmodule PokerMind.Engine.TableState do
       |> Enum.uniq()
       |> Enum.sort()
 
+    # Chips committed by folded players above the highest in-hand cap would
+    # otherwise be dropped: build_pots only emits layers up to that cap, so a
+    # folded player who over-contributed (e.g. a BB poster who folds to a
+    # sub-blind short all-in) loses chips that no in-hand player can match.
+    # Fold the forfeit into the topmost raw pot — it goes to whoever wins the
+    # layer at the highest in-hand cap, exactly as if the folder had checked
+    # down.
+    max_in_hand_cap = List.last(layers) || 0
+
+    folded_overbet =
+      players
+      |> Enum.filter(&(&1.state not in [:active_in_hand, :all_in]))
+      |> Enum.map(&max(0, &1.total_contributed - max_in_hand_cap))
+      |> Enum.sum()
+
     {raw_pots, _} =
       Enum.map_reduce(layers, 0, fn layer, prev_layer ->
         amount =
@@ -322,6 +363,17 @@ defmodule PokerMind.Engine.TableState do
 
         {%{amount: amount, eligible_ids: eligible_player_ids}, layer}
       end)
+
+    raw_pots =
+      case raw_pots do
+        [] ->
+          raw_pots
+
+        _ ->
+          List.update_at(raw_pots, -1, fn pot ->
+            Map.update!(pot, :amount, &(&1 + folded_overbet))
+          end)
+      end
 
     # Collapse single-eligible pots into refunds (uncontested middle/top layers).
     {pots, refunds} =
@@ -350,8 +402,17 @@ defmodule PokerMind.Engine.TableState do
     Map.put(state, :highest_raise, amount)
   end
 
+  def update_raise_amount(%__MODULE__{} = state, amount)
+      when is_integer(amount) and amount > 0 do
+    Map.put(state, :raise_amount, amount)
+  end
+
   def reset_highest_raise(%__MODULE__{} = state) do
-    Map.put(state, :highest_raise, state.big_blind_amount)
+    Map.put(state, :highest_raise, 0)
+  end
+
+  def reset_raise_amount(%__MODULE__{} = state) do
+    Map.put(state, :raise_amount, 0)
   end
 
   def compare_cards(rank1, rank2)
@@ -426,6 +487,7 @@ defmodule PokerMind.Engine.TableState do
     |> apply_refunds(refunds)
     |> apply_pot_distribution(pots)
     |> Map.put(:pot, 0)
+    |> advance_phase(:hand_finished)
   end
 
   defp apply_refunds(%__MODULE__{} = state, refunds) do
@@ -501,14 +563,16 @@ defmodule PokerMind.Engine.TableState do
           |> set_player_value(player.id, :current_hand, [])
           |> set_player_value(player.id, :current_bet, 0)
           |> set_player_value(player.id, :has_acted, false)
+          |> set_player_value(player.id, :total_contributed, 0)
           |> reset_player_state(player)
         end)
 
       new_state
+      |> Map.put(:hands_played, new_state.hands_played + 1)
       |> Map.put(:community_cards, [])
       |> new_deck()
-      |> set_blinds(false)
       |> deal_cards()
+      |> set_blinds(false)
       |> Map.put(:phase, :pre_flop)
     end
   end

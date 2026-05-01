@@ -7,12 +7,84 @@ defmodule PokerMindWeb.GameController do
   alias PokerMind.Engine.Match.Supervisor, as: MatchSupervisor
   alias PokerMind.Engine.TableState
   alias PokerMind.Engine.TableState.PlayerState
-
   alias PokerMindWeb.Schemas.ActionRequest
+  alias PokerMindWeb.Schemas.BadRequest
+  alias PokerMindWeb.Schemas.CloseSuiteRequest
+  alias PokerMindWeb.Schemas.CloseSuiteResponse
   alias PokerMindWeb.Schemas.GameResponse
+  alias PokerMindWeb.Schemas.InternalServerError
+  alias PokerMindWeb.Schemas.NotFound
+  alias PokerMindWeb.Schemas.StartSuiteRequest
+  alias PokerMindWeb.Schemas.StartSuiteResponse
+  alias PokerMindWeb.Schemas.SuitesResponse
+
+  operation(:suites,
+    summary: "List all match suites",
+    responses: [
+      ok: {"List of match suites and associated players", "application/json", SuitesResponse}
+    ]
+  )
 
   def suites(conn, _params) do
-    json(conn, %{data: MatchSupervisor.all_match_suites()})
+    json(conn, MatchSupervisor.all_match_suites())
+  end
+
+  operation(:start_suite,
+    summary: "Start a new game suite",
+    request_body: {"Suite params", "application/json", StartSuiteRequest},
+    responses: [
+      ok: {"Started new suite", "application/json", StartSuiteResponse},
+      bad_request: {"Bad request", "application/json", BadRequest}
+    ]
+  )
+
+  def start_suite(conn, %{"players" => players} = params) do
+    with :ok <- validate_players(players),
+         :ok <- maybe_validate_int(params, "num_games") do
+      num_games =
+        case Map.get(params, "num_games") do
+          nil -> 10
+          val when is_integer(val) -> val
+        end
+
+      suite_id = UUID.uuid4()
+      {:ok, _pid, suite_id} = MatchSupervisor.start_match_suite(suite_id, players, num_games)
+      json(conn, %{suite_id: suite_id})
+    else
+      {:error, msg} -> conn |> put_status(:bad_request) |> json(%{error: msg})
+    end
+  end
+
+  def start_suite(conn, _params) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{error: "players are required"})
+  end
+
+  operation(:close_suite,
+    summary: "Close a game suite",
+    request_body: {"Close suite params", "application/json", CloseSuiteRequest},
+    responses: [
+      ok: {"Closed suite", "application/json", CloseSuiteResponse},
+      not_found: {"Not found", "application/json", NotFound},
+      bad_request: {"Bad request", "application/json", BadRequest}
+    ]
+  )
+
+  def close_suite(conn, %{"id" => suite_id}) do
+    case MatchSupervisor.close_match_suite(suite_id) do
+      :ok ->
+        json(conn, %{})
+
+      {:error, :suite_not_found} ->
+        conn |> put_status(:not_found) |> json(%{error: "suite_id not found"})
+    end
+  end
+
+  def close_suite(conn, _params) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{error: "suite_id is required"})
   end
 
   operation(:next_games,
@@ -22,7 +94,9 @@ defmodule PokerMindWeb.GameController do
       suite_id: [in: :query, description: "Suite ID", type: :string]
     ],
     responses: [
-      ok: {"List of games", "application/json", GameResponse}
+      ok: {"List of games", "application/json", GameResponse},
+      not_found: {"Not found", "application/json", NotFound},
+      bad_request: {"Bad request", "application/json", BadRequest}
     ]
   )
 
@@ -39,7 +113,16 @@ defmodule PokerMindWeb.GameController do
 
       games ->
         mapped_games = Enum.map(games, fn game -> map_tablestate(game, player_id) end)
-        json(conn, %{data: mapped_games})
+        all_games_finished = Coordinator.get_state(coordinator_id).all_games_finished?
+        overall_winners = Coordinator.get_state(coordinator_id).winners
+
+        data = %{
+          "all_games_finished" => all_games_finished,
+          "games" => mapped_games,
+          "overall_winners" => overall_winners
+        }
+
+        json(conn, data)
     end
   end
 
@@ -53,24 +136,35 @@ defmodule PokerMindWeb.GameController do
     summary: "Submit a player action",
     request_body: {"Action params", "application/json", ActionRequest},
     responses: [
-      ok: {"Updated game state", "application/json", PokerMindWeb.Schemas.Game}
+      ok: {"Updated game state", "application/json", PokerMindWeb.Schemas.Game},
+      not_found: {"Not found", "application/json", NotFound},
+      bad_request: {"Bad request", "application/json", BadRequest},
+      internal_server_error: {"Internal server error", "application/json", InternalServerError}
     ]
   )
 
-  def perform_action(conn, %{
-        "player_id" => player_id,
-        "game_id" => game_id,
-        "action" => action
-      }) do
-    case Game.apply_action(game_id, action, player_id) do
-      {:ok, state} ->
-        mapped_state = %{state | game: map_tablestate(state.game, player_id)}
-        json(conn, %{data: mapped_state})
-
+  def perform_action(
+        conn,
+        %{
+          "player_id" => player_id,
+          "game_id" => game_id,
+          "action" => _action
+        } = params
+      ) do
+    with {:ok, parsed_params} <- parse_params(params),
+         {:ok, game_state} <- Game.apply_action(game_id, parsed_params) do
+      mapped_state = map_tablestate(game_state, player_id)
+      json(conn, mapped_state)
+    else
       {:error, :game_not_found} ->
         conn
         |> put_status(:not_found)
         |> json(%{error: "Game not found"})
+
+      {:error, {_, reason}} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: to_string(reason)})
 
       {:error, reason} ->
         conn
@@ -128,5 +222,70 @@ defmodule PokerMindWeb.GameController do
       current_player_id: tablestate.current_player_id,
       highest_raise: tablestate.highest_raise
     }
+  end
+
+  defp validate_players(players) do
+    cond do
+      players == nil -> {:error, "players were not set, please provude atleast 2"}
+      players == [] -> {:error, "got empty list of players, please provide atleast 2"}
+      length(players) == 1 -> {:error, "got a list with 1 player, please provide atleast 2"}
+      Enum.any?(players, &(not is_binary(&1))) -> {:error, "players should be a list of strings"}
+      true -> :ok
+    end
+  end
+
+  defp maybe_validate_int(params, key) do
+    val = Map.get(params, key)
+
+    cond do
+      is_nil(val) ->
+        :ok
+
+      is_integer(val) ->
+        :ok
+
+      true ->
+        {:error, "key #{key} is not an integer, got: #{inspect(val)}"}
+    end
+  end
+
+  defp parse_params(params) do
+    with {:ok, params} <- parse_type(params),
+         {:ok, params} <- parse_player_id(params),
+         :ok <- maybe_validate_int(params, "amount") do
+      parsed_params =
+        for {k, v} <- Map.take(params, ["action", "player_id", "amount"]),
+            into: %{},
+            do: {String.to_existing_atom(k), v}
+
+      {:ok, parsed_params}
+    end
+  end
+
+  @allowed_actions ["call", "raise", "all_in", "fold", "check"]
+  defp parse_type(params) do
+    type = Map.get(params, "action")
+
+    cond do
+      not is_binary(type) ->
+        {:error, "The given action is not a binary/string, got #{inspect(type)}"}
+
+      type not in @allowed_actions ->
+        {:error,
+         "given action action is not allowed, only accepts the following: #{inspect(@allowed_actions)}"}
+
+      true ->
+        {:ok, %{params | "action" => String.to_existing_atom(type)}}
+    end
+  end
+
+  defp parse_player_id(params) do
+    player_id = Map.get(params, "player_id")
+
+    if not is_binary(player_id) and player_id != "" do
+      {:error, "provided player_id has to be a non-empty string"}
+    else
+      {:ok, params}
+    end
   end
 end

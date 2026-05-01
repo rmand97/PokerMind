@@ -74,7 +74,8 @@ defmodule PokerMind.Engine.Match.Coordinator do
     all_games_ready?: false,
     games: %{},
     num_games: nil,
-    players: nil
+    players: nil,
+    winners: nil
   }
 
   @impl true
@@ -108,11 +109,14 @@ defmodule PokerMind.Engine.Match.Coordinator do
   def handle_cast({:game_finished, game_id, winner}, state) do
     updated_state =
       state
-      |> update_in([:games, game_id], fn game ->
-        %{game | finished?: true, winner: winner, next_player: nil}
-      end)
-      |> then(fn s ->
-        Map.put(s, :all_games_finished?, Enum.all?(s.games, fn {_id, game} -> game.finished? end))
+      |> mark_game_finished(game_id, winner)
+      |> check_all_games_finished()
+      |> then(fn state ->
+        if state.all_games_finished? do
+          calculate_overall_winners(state)
+        else
+          state
+        end
       end)
 
     {:noreply, updated_state}
@@ -154,5 +158,38 @@ defmodule PokerMind.Engine.Match.Coordinator do
       end)
 
     {:reply, response, state}
+  end
+
+  defp mark_game_finished(state, game_id, winner) do
+    update_in(state, [:games, game_id], fn game ->
+      %{game | finished?: true, winner: winner, next_player: nil}
+    end)
+  end
+
+  defp check_all_games_finished(state) do
+    Map.put(
+      state,
+      :all_games_finished?,
+      Enum.all?(state.games, fn {_id, game} -> game.finished? end)
+    )
+  end
+
+  defp calculate_overall_winners(state) do
+    frequencies =
+      state.games
+      |> Enum.map(fn {_id, game} -> game.winner end)
+      |> Enum.frequencies()
+
+    max_count =
+      frequencies
+      |> Map.values()
+      |> Enum.max()
+
+    all_winners =
+      frequencies
+      |> Enum.filter(fn {_winner, count} -> count == max_count end)
+      |> Enum.map(fn {winner, _count} -> winner end)
+
+    Map.put(state, :winners, all_winners)
   end
 end
