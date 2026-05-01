@@ -191,7 +191,8 @@ defmodule PokerMindWeb.GameController do
       remaining_chips: player.remaining_chips,
       state: player.state,
       has_acted: player.has_acted,
-      current_bet: player.current_bet
+      current_bet: player.current_bet,
+      total_contributed: player.total_contributed
     }
 
     if player.id == calling_player_id do
@@ -219,8 +220,13 @@ defmodule PokerMindWeb.GameController do
       phase: tablestate.phase,
       pot: tablestate.pot,
       community_cards: tablestate.community_cards,
+      small_blind_id: tablestate.small_blind_id,
       current_player_id: tablestate.current_player_id,
-      highest_raise: tablestate.highest_raise
+      highest_raise: tablestate.highest_raise,
+      big_blind_amount: tablestate.big_blind_amount,
+      raise_amount: tablestate.raise_amount,
+      winner: tablestate.winner,
+      hands_played: tablestate.hands_played
     }
   end
 
