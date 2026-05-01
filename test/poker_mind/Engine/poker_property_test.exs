@@ -181,7 +181,8 @@ defmodule PokerMind.Engine.PokerPropertyTest do
     # 7 available cards and verify best_hand picked the maximum. This is
     # the most direct test of the search logic in best_hand/2.
     property "best_hand value equals the maximum over all 5-card subsets" do
-      check all(deck <- shuffled_deck_gen(), max_runs: 200) do #O(n^5) over 52 cards
+      # O(n^5) over 52 cards
+      check all(deck <- shuffled_deck_gen(), max_runs: 200) do
         cards = Enum.take(deck, 7)
         hole = cards |> Enum.take(2) |> List.to_tuple()
         community = cards |> Enum.slice(2, 5) |> List.to_tuple()
