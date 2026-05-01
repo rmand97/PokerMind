@@ -42,5 +42,26 @@ defmodule PokerMind.Engine.Match.SupervisorTest do
       assert suites[suite1_id] == players1
       assert suites[suite2_id] == players2
     end
+
+    test "close_match_suite/1 properly closes suite and its children" do
+      suite_id = UUID.uuid4()
+      players = ["rolf", "stine"]
+      {:ok, pid, ^suite_id} = MatchSupport.start_match_suite!(suite_id, players)
+      assert %{^suite_id => ^players} = MatchSupervisor.all_match_suites()
+
+      children = DynamicSupervisor.which_children(pid)
+      assert length(children) == 11
+
+      game_pids = Enum.map(children, fn child -> elem(child, 1) end)
+
+      refs = Enum.map(game_pids, fn game_pid -> {game_pid, Process.monitor(game_pid)} end)
+
+      assert :ok = MatchSupervisor.close_match_suite(suite_id)
+      refute Process.alive?(pid)
+
+      Enum.each(refs, fn {game_pid, ref} ->
+        assert_receive {:DOWN, ^ref, :process, ^game_pid, _reason}, 5_000
+      end)
+    end
   end
 end
