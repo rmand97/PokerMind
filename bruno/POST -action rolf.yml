@@ -1,18 +1,21 @@
 info:
-  name: POST /action
+  name: POST /action rolf
   type: http
-  seq: 3
+  seq: 4
 
 http:
   method: POST
   url: http://localhost:4000/api/action
+  headers:
+    - name: Authorization
+      value: test-secret
   body:
     type: json
     data: |-
       {
-        "player_id": "stine",
-        "game_id": "123",
-        "action": "call"
+        "player_id": "rolf",
+        "game_id": "e484675c-2886-4834-8db1-bb5a827cb57f-1",
+        "action": "all_in"
       }
   auth: inherit
 

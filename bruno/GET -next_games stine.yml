@@ -1,0 +1,34 @@
+info:
+  name: GET /next_games stine
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: http://localhost:4000/api/next_games?player_id=stine&suite_id=e484675c-2886-4834-8db1-bb5a827cb57f
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: authorization
+      value: test-secret
+  params:
+    - name: player_id
+      value: stine
+      type: query
+    - name: suite_id
+      value: e484675c-2886-4834-8db1-bb5a827cb57f
+      type: query
+  body:
+    type: json
+    data: |-
+      {
+        "player_id": "stine",
+        "suite_id": "91f92ffb-516a-4da7-aa2e-7c96848595b1"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
