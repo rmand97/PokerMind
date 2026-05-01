@@ -159,23 +159,30 @@ defmodule PokerMindWeb.Schemas do
     require OpenApiSpex
 
     OpenApiSpex.schema(%{
-      title: "Action Parameters",
-      description: "Required parameters for making an action",
-      type: :object,
-      properties: %{
-        player_id: %Schema{type: :string, description: "Player ID"},
-        game_id: %Schema{type: :string, description: "Game ID"},
-        action: %Schema{
-          type: :string,
-          description: "Action to perform",
-          enum: ["fold", "check", "call", "raise", "all_in"]
+      title: "ActionRequest",
+      oneOf: [
+        %Schema{
+          title: "BasicAction",
+          type: :object,
+          properties: %{
+            player_id: %Schema{type: :string},
+            game_id: %Schema{type: :string},
+            action: %Schema{type: :string, enum: ["fold", "check", "call", "all_in"]}
+          },
+          required: [:player_id, :game_id, :action]
         },
-        amount: %Schema{
-          type: :integer,
-          description: "Required when action is raise. Provide the total amount to raise to."
+        %Schema{
+          title: "RaiseAction",
+          type: :object,
+          properties: %{
+            player_id: %Schema{type: :string},
+            game_id: %Schema{type: :string},
+            action: %Schema{type: :string, enum: ["raise"]},
+            amount: %Schema{type: :integer, description: "Total amount to raise to"}
+          },
+          required: [:player_id, :game_id, :action, :amount]
         }
-      },
-      required: [:player_id, :game_id, :action]
+      ]
     })
   end
 
