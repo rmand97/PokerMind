@@ -7,8 +7,16 @@ defmodule PokerMindWeb.Schemas do
     OpenApiSpex.schema(%{
       type: :object,
       properties: %{
-        rank: %Schema{type: :integer},
-        suit: %Schema{type: :string}
+        rank: %Schema{
+          type: :integer,
+          description: "Card rank (1-13). Ace = 1, Jack = 11, Queen = 12, King = 13",
+          enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+        },
+        suit: %Schema{
+          type: :string,
+          description: "Card suit",
+          enum: ["clubs", "diamonds", "hearts", "spades"]
+        }
       },
       required: [:rank, :suit]
     })
@@ -22,14 +30,22 @@ defmodule PokerMindWeb.Schemas do
       properties: %{
         id: %Schema{type: :string, description: "Player ID"},
         remaining_chips: %Schema{type: :integer, description: "Remaining chips"},
-        state: %Schema{type: :string, description: "Player state"},
+        state: %Schema{
+          type: :string,
+          description: "Current state of the player",
+          enum: ["active_in_hand", "inactive_in_hand", "all_in", "out_of_chips"]
+        },
         has_acted: %Schema{
           type: :boolean,
           description: "Whether the player has acted in this betting round"
         },
-        current_bet: %Schema{type: :integer, description: "Your current bet"}
+        current_bet: %Schema{type: :integer, description: "Current bet this betting round"},
+        total_contributed: %Schema{
+          type: :integer,
+          description: "Total contribution of chips this betting round"
+        }
       },
-      required: [:id, :remaining_chips, :state, :has_acted, :current_bet]
+      required: [:id, :remaining_chips, :state, :has_acted, :current_bet, :total_contributed]
     })
   end
 
@@ -47,7 +63,7 @@ defmodule PokerMindWeb.Schemas do
             %Schema{
               type: :object,
               properties: %{
-                current_hand: %Schema{type: :array, items: Card, description: "Your Hand"}
+                current_hand: %Schema{type: :array, items: Card, description: "Your hand"}
               },
               required: [:current_hand]
             }
@@ -58,11 +74,27 @@ defmodule PokerMindWeb.Schemas do
           items: Player,
           description: "List of other players in the game"
         },
-        phase: %Schema{type: :string, description: "Phase of the current betting round"},
+        phase: %Schema{
+          type: :string,
+          description: "Current phase of the betting round",
+          enum: ["pre_flop", "flop", "turn", "river", "game_finished"]
+        },
         pot: %Schema{type: :integer, description: "Current size of the pot"},
         community_cards: %Schema{type: :array, items: Card, description: "Cards on the table"},
-        current_player_id: %Schema{type: :string, description: "Current player turn"},
-        highest_raise: %Schema{type: :integer, description: "Current bet to match"}
+        small_blind_id: %Schema{type: :string, description: "Small blind player"},
+        current_player_id: %Schema{type: :string, description: "Player to act"},
+        highest_raise: %Schema{type: :integer, description: "Current bet to match"},
+        big_blind_amount: %Schema{type: :integer, description: "Current big blind amount"},
+        raise_amount: %Schema{type: :integer, description: "The lowest possible raise to perform"},
+        winner: %Schema{
+          type: :string,
+          nullable: true,
+          description: "The winner of the table"
+        },
+        hands_played: %Schema{
+          type: :integer,
+          description: "Number of hands currently played for this table"
+        }
       },
       required: [
         :id,
@@ -71,8 +103,13 @@ defmodule PokerMindWeb.Schemas do
         :phase,
         :pot,
         :community_cards,
+        :small_blind_id,
         :current_player_id,
-        :highest_raise
+        :highest_raise,
+        :big_blind_amount,
+        :raise_amount,
+        :winner,
+        :hands_played
       ]
     })
   end
@@ -126,10 +163,17 @@ defmodule PokerMindWeb.Schemas do
       description: "Required parameters for making an action",
       type: :object,
       properties: %{
-        player_id: %Schema{type: :string, description: "Your ID"},
+        player_id: %Schema{type: :string, description: "Player ID"},
         game_id: %Schema{type: :string, description: "Game ID"},
-        action: %Schema{type: :string, description: "Action to perform"},
-        amount: %Schema{type: :integer, description: "Amount you raise to if raise"}
+        action: %Schema{
+          type: :string,
+          description: "Action to perform",
+          enum: ["fold", "check", "call", "raise", "all_in"]
+        },
+        amount: %Schema{
+          type: :integer,
+          description: "Required when action is raise. Provide the total amount to raise to."
+        }
       },
       required: [:player_id, :game_id, :action]
     })

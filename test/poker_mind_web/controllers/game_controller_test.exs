@@ -68,14 +68,19 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
     assert state = json_response(conn, 200)
 
     assert Map.keys(state) == [
+             "big_blind_amount",
              "community_cards",
              "current_player_id",
+             "hands_played",
              "highest_raise",
              "id",
              "other_players",
              "phase",
              "player",
-             "pot"
+             "pot",
+             "raise_amount",
+             "small_blind_id",
+             "winner"
            ]
 
     assert Map.keys(hd(state["other_players"])) == [
@@ -83,7 +88,8 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
              "has_acted",
              "id",
              "remaining_chips",
-             "state"
+             "state",
+             "total_contributed"
            ]
 
     assert Map.keys(state["player"]) == [
@@ -92,7 +98,8 @@ defmodule PokerMind.Engine.Match.GameControllerTest do
              "has_acted",
              "id",
              "remaining_chips",
-             "state"
+             "state",
+             "total_contributed"
            ]
 
     assert state["id"] == game_id
